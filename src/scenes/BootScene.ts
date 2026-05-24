@@ -68,8 +68,14 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("staple", 12, 6, (g) => this.drawStaple(g));
     this.makeTexture("guard_bullet", 8, 4, (g) => this.drawGuardBullet(g));
 
-    // Muzzle flash
+    // Muzzle flash sprite (one-shot bright burst at the barrel)
     this.makeTexture("muzzle", 16, 12, (g) => this.drawMuzzle(g));
+    this.makeTexture("muzzle_flash", 40, 24, (g) => this.drawMuzzleFlash(g));
+
+    // Particle textures
+    this.makeTexture("particle_spark", 6, 6, (g) => this.drawParticleSpark(g));
+    this.makeTexture("particle_smoke", 24, 24, (g) => this.drawParticleSmoke(g));
+    this.makeTexture("particle_debris", 6, 6, (g) => this.drawParticleDebris(g));
 
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
@@ -382,6 +388,39 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(0, 6, 14, 0, 14, 12);
     g.fillStyle(0xffe040, 0.6);
     g.fillCircle(4, 6, 3);
+  }
+
+  private drawMuzzleFlash(g: Phaser.GameObjects.Graphics): void {
+    // 40 x 24 — bright radial burst sprite. Used by Particles.muzzleFlash
+    // as the instant flash overlay before sparks fly outward.
+    g.fillStyle(0xfff0a0, 0.9);
+    g.fillEllipse(20, 12, 36, 18);
+    g.fillStyle(0xffe066, 1);
+    g.fillEllipse(20, 12, 22, 12);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillEllipse(20, 12, 10, 6);
+  }
+
+  private drawParticleSpark(g: Phaser.GameObjects.Graphics): void {
+    // White 4x4 — will be tinted at emit time. Slight rounding for softness.
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(1, 0, 4, 6);
+    g.fillRect(0, 1, 6, 4);
+  }
+
+  private drawParticleSmoke(g: Phaser.GameObjects.Graphics): void {
+    // Soft circle gradient — approximate with concentric circles of
+    // decreasing alpha.
+    for (let r = 12; r >= 1; r--) {
+      g.fillStyle(0xffffff, (1 - r / 12) * 0.18);
+      g.fillCircle(12, 12, r);
+    }
+  }
+
+  private drawParticleDebris(g: Phaser.GameObjects.Graphics): void {
+    // Small chunky square — will be tinted dark at emit time.
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(0, 0, 6, 6);
   }
 
   // ---------- Props ----------

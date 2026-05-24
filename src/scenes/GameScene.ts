@@ -7,6 +7,7 @@ import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 import { ComboSystem } from "../core/ComboSystem";
 import { HUD } from "../ui/HUD";
 import { sound } from "../core/Sound";
+import { Particles } from "../core/Particles";
 
 export class GameScene extends Phaser.Scene {
   private player!: SideScrollerPlayer;
@@ -18,6 +19,7 @@ export class GameScene extends Phaser.Scene {
   private elevator!: Phaser.Physics.Arcade.Sprite;
   private combo!: ComboSystem;
   private hud!: HUD;
+  private particles!: Particles;
   private keys!: PlayerKeys;
   private level!: LevelData;
   private caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -51,6 +53,7 @@ export class GameScene extends Phaser.Scene {
     this.buildElevator(lvl);
 
     this.combo = new ComboSystem();
+    this.particles = new Particles(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
     this.pistol = new Pistol(this);
     this.guardGun = new GuardGun(this);
@@ -90,11 +93,18 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.pistol.bullets, this.guards, (bullet, enemy) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       const e = enemy as SecurityGuard;
+      const hx = b.x;
+      const hy = b.y;
       this.pistol.recycle(b);
       sound.hit();
+      this.particles.impactSparks(hx, hy, 6);
+      this.particles.playerHit(hx, hy); // small red splash on guard hit
       if (e.damage()) {
+        const dx = e.x;
+        const dy = e.y - 60;
         e.destroy();
         sound.death();
+        this.particles.guardDeath(dx, dy);
         this.combo.registerKill(this.time.now);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
@@ -106,9 +116,12 @@ export class GameScene extends Phaser.Scene {
     // Guard bullets → player
     this.physics.add.overlap(this.player, this.guardGun.bullets, (_pl, bullet) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
+      const hx = b.x;
+      const hy = b.y;
       this.guardGun.recycle(b);
       if (this.player.takeDamage(this.time.now)) {
         sound.playerHurt();
+        this.particles.playerHit(hx, hy);
         this.combo.break();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
@@ -198,7 +211,16 @@ export class GameScene extends Phaser.Scene {
         this.player.shoulderY,
         this.player.aimAngle
       );
-      if (fired) this.player.flashMuzzle(time);
+      if (fired) {
+        this.player.flashMuzzle(time);
+        // Muzzle flash particles at the spawn point (a bit in front of the
+        // shoulder), not at the gun-arm tip.
+        const off = SideScrollerConfig.pistol.spawnOffset;
+        const mx = this.player.shoulderX + Math.cos(this.player.aimAngle) * off;
+        const my = this.player.shoulderY + Math.sin(this.player.aimAngle) * off;
+        this.particles.muzzleFlash(mx, my, this.player.aimAngle);
+        this.particles.smokePuff(mx, my, 1);
+      }
     }
 
     // Enemy AI
