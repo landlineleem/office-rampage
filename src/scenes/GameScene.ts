@@ -644,6 +644,21 @@ export class GameScene extends Phaser.Scene {
       this.combo.score,
       inWithdrawal
     );
+    // Boss HP bar — show/update if a boss is alive
+    this.updateBossUi();
+  }
+
+  private updateBossUi(): void {
+    const boss = (this.guards.getChildren() as Enemy[]).find(
+      (e) => e.active && e.config.name === "The CEO"
+    );
+    if (boss) {
+      const pct = boss.hp / boss.config.hp;
+      this.hud.showBossBar(boss.config.name);
+      this.hud.updateBossBar(pct);
+    } else {
+      this.hud.hideBossBar();
+    }
   }
 
   // ---------- Setup helpers ----------

@@ -279,6 +279,54 @@ export class HUD {
     this.scoreText.setText(`SCORE  ${score.toString().padStart(5, "0")}`);
   }
 
+  // ---------- Boss HP bar ----------
+  private bossLabel?: Phaser.GameObjects.Text;
+  private bossBarBg?: Phaser.GameObjects.Rectangle;
+  private bossBar?: Phaser.GameObjects.Rectangle;
+
+  showBossBar(name: string): void {
+    if (this.bossLabel) return;
+    const w = this.scene.scale.width;
+    const z = 1100;
+    this.bossLabel = this.scene.add
+      .text(w / 2, 16, name.toUpperCase(), {
+        fontFamily: FONT,
+        fontSize: "16px",
+        color: "#ffe066",
+        stroke: "#1a1d24",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(z);
+    this.bossBarBg = this.scene.add
+      .rectangle(w / 2 - 200, 40, 400, 16, 0x000000, 0.7)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(z - 1);
+    this.bossBar = this.scene.add
+      .rectangle(w / 2 - 198, 42, 396, 12, 0xc73a3a)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(z);
+  }
+
+  updateBossBar(pct: number): void {
+    if (!this.bossBar) return;
+    this.bossBar.width = 396 * Phaser.Math.Clamp(pct, 0, 1);
+    // Color shifts as boss takes damage
+    this.bossBar.fillColor = pct > 0.5 ? 0xc73a3a : pct > 0.2 ? 0xff8030 : 0xffe066;
+  }
+
+  hideBossBar(): void {
+    this.bossLabel?.destroy();
+    this.bossBarBg?.destroy();
+    this.bossBar?.destroy();
+    this.bossLabel = undefined;
+    this.bossBarBg = undefined;
+    this.bossBar = undefined;
+  }
+
   setWeapon(name: string): void {
     this.weaponText.setText(`▸ ${name}`);
     this.scene.tweens.add({
