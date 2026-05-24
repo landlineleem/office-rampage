@@ -18,13 +18,17 @@ export class Stapler {
     if (now - this.lastFire < OfficeConfig.stapler.fireRateMs) return false;
     this.lastFire = now;
 
-    const b = this.bullets.get(x, y) as Phaser.Physics.Arcade.Sprite | null;
+    // Spawn the staple from slightly in front of the player so it doesn't
+    // visually erupt from the chest.
+    const spawnX = x + Math.cos(angle) * 28;
+    const spawnY = y + Math.sin(angle) * 28;
+    const b = this.bullets.get(spawnX, spawnY) as Phaser.Physics.Arcade.Sprite | null;
     if (!b) return false;
 
     b.setActive(true).setVisible(true);
     const body = b.body as Phaser.Physics.Arcade.Body;
-    body.reset(x, y);
-    body.setCircle(2, 2, 1);
+    body.reset(spawnX, spawnY);
+    body.setCircle(3, 3, 1);
     b.rotation = angle;
 
     const sp = OfficeConfig.stapler.bulletSpeed;

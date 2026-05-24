@@ -11,13 +11,15 @@ export type MoveKeys = {
 export class Player extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   invulnUntil = 0;
+  private moving = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "player");
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(14, 2, 2);
+    // Sprite is 56x56; physics circle radius 12 centered on the body
+    body.setCircle(12, 14, 16);
     body.setCollideWorldBounds(true);
     this.hp = OfficeConfig.player.maxHP;
   }
@@ -46,9 +48,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       vy /= mag;
     }
     this.setVelocity(vx * speed, vy * speed);
+    this.moving = mag > 0;
   }
 
   aimAt(x: number, y: number): void {
     this.rotation = Math.atan2(y - this.y, x - this.x);
+  }
+
+  animateBobble(time: number): void {
+    if (this.moving) {
+      const s = 1 + Math.sin(time * 0.024) * 0.06;
+      this.setScale(s);
+    } else if (this.scale !== 1) {
+      this.setScale(1);
+    }
   }
 }

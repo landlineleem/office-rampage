@@ -50,6 +50,8 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(4, h / 2, 8, h, wallColor);
     this.add.rectangle(w - 4, h / 2, 8, h, wallColor);
 
+    this.scatterDecor(w, h);
+
     this.physics.world.setBounds(0, 0, w, h);
 
     this.player = new Player(this, w / 2, h / 2);
@@ -129,11 +131,13 @@ export class GameScene extends Phaser.Scene {
     this.player.aimAt(pointer.worldX, pointer.worldY);
     if (pointer.leftButtonDown()) this.fireAt(pointer.worldX, pointer.worldY);
 
+    this.player.animateBobble(time);
+
     // Scale enemies + bullets by world factor (cheap manual slow-mo)
     this.enemies.getChildren().forEach((c) => {
       const i = c as Intern;
       if (!i.active) return;
-      i.pursue(this.player.x, this.player.y, worldFactor);
+      i.pursue(this.player.x, this.player.y, worldFactor, time);
     });
     this.stapler.bullets.getChildren().forEach((c) => {
       const b = c as Phaser.Physics.Arcade.Sprite;
@@ -153,6 +157,40 @@ export class GameScene extends Phaser.Scene {
       this.combo.score,
       inWithdrawal
     );
+  }
+
+  private scatterDecor(w: number, h: number): void {
+    // Lay out decorative office furniture on a loose grid, skipping the
+    // center so the player has spawn room.
+    const rng = Phaser.Math.RND;
+    const cols = 7;
+    const rows = 5;
+    const xs = w / (cols + 1);
+    const ys = h / (rows + 1);
+    const cx = w / 2;
+    const cy = h / 2;
+
+    for (let r = 1; r <= rows; r++) {
+      for (let c = 1; c <= cols; c++) {
+        const x = c * xs + rng.between(-24, 24);
+        const y = r * ys + rng.between(-16, 16);
+        if (Phaser.Math.Distance.Between(x, y, cx, cy) < 140) continue;
+        const pick = rng.between(0, 12);
+        const tilt = Phaser.Math.FloatBetween(-0.15, 0.15);
+
+        if (pick < 7) {
+          // Desk + monitor combo
+          this.add.image(x, y, "desk").setRotation(tilt).setAlpha(0.95);
+          this.add.image(x - 2, y - 6, "monitor").setRotation(tilt);
+        } else if (pick < 10) {
+          this.add.image(x, y, "water_cooler");
+        } else if (pick < 11) {
+          this.add.image(x, y, "coffee_machine");
+        } else {
+          this.add.image(x, y, "plant");
+        }
+      }
+    }
   }
 
   private onPlayerDeath(): void {
