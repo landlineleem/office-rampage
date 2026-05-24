@@ -871,13 +871,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildBoardroomDecor(lvl: LevelData): void {
-    // Leather chairs along the table at intervals
-    [950, 1250, 1550, 1850, 2150].forEach((x) =>
+    // Leather chairs positioned along the boardroom table on the player's
+    // side. Table is at x=800-1400 so chairs span that range evenly.
+    [900, 1050, 1200, 1350].forEach((x) =>
       this.add.image(x, lvl.groundY, "leather_chair").setOrigin(0.5, 1).setDepth(6)
     );
-    // Chandelier centered over the boardroom
-    this.add.image(1400, 80, "chandelier").setOrigin(0.5, 0);
-    this.add.image(2400, 80, "chandelier").setOrigin(0.5, 0);
+    // Big chandelier centered over the boardroom table
+    this.add.image(1100, 60, "chandelier").setOrigin(0.5, 0);
+    // Smaller secondary chandelier farther down
+    this.add.image(2500, 60, "chandelier").setOrigin(0.5, 0).setScale(0.8);
     // Floor plants in corners
     [300, lvl.width - 300].forEach((x) =>
       this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
