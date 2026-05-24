@@ -495,21 +495,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnScorePopup(x: number, y: number, value: number): void {
+    // Bigger + brighter for big-number kills (long combos, boss, etc.)
+    const big = value >= 1000;
+    const huge = value >= 5000;
     const text = this.add
       .text(x, y, `+${value}`, {
         fontFamily: "ui-monospace, monospace",
-        fontSize: "16px",
-        color: value >= 1000 ? "#ff8030" : "#ffe066",
+        fontSize: huge ? "24px" : big ? "20px" : "16px",
+        color: huge ? "#ff3030" : big ? "#ff8030" : "#ffe066",
         stroke: "#1a1d24",
         strokeThickness: 3,
       })
       .setOrigin(0.5, 1)
       .setDepth(800);
+    if (huge) {
+      // Quick scale punch on huge scores
+      text.setScale(0.5);
+      this.tweens.add({
+        targets: text,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 140,
+        ease: "Back.easeOut",
+      });
+    }
     this.tweens.add({
       targets: text,
-      y: y - 60,
+      y: y - (huge ? 90 : 60),
       alpha: 0,
-      duration: 900,
+      duration: huge ? 1200 : 900,
       ease: "Cubic.easeOut",
       onComplete: () => text.destroy(),
     });
