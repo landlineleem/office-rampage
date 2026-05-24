@@ -301,6 +301,60 @@ class SoundEngine {
       osc.stop(now + i * 0.18 + 0.55);
     });
   }
+
+  // ---------- Ambient music ----------
+  // Layered low drone + harmony pad with slow detune drift. Loops
+  // indefinitely; routed through the slow-mo bus so it also gets the
+  // underwater filter when slow-mo activates.
+
+  private musicNodes: AudioNode[] = [];
+
+  startMusic(): void {
+    if (!this.ctx || !this.slowMoBus || this.musicNodes.length > 0) return;
+    const ctx = this.ctx;
+    // A1 / E2 / A2 — open fifth pad, low and broody.
+    const layers = [
+      { freq: 55, gain: 0.04, lfoFreq: 0.08, lfoDepth: 6 },
+      { freq: 82.5, gain: 0.025, lfoFreq: 0.11, lfoDepth: 4 },
+      { freq: 110, gain: 0.018, lfoFreq: 0.07, lfoDepth: 5 },
+      { freq: 220, gain: 0.006, lfoFreq: 0.13, lfoDepth: 3 }, // sparkle
+    ];
+    for (const layer of layers) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = layer.freq;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(layer.gain, ctx.currentTime + 1.5);
+      // LFO modulates detune slowly so the pad drifts
+      const lfo = ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = layer.lfoFreq;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = layer.lfoDepth;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.detune);
+      osc.connect(gain);
+      gain.connect(this.slowMoBus);
+      osc.start();
+      lfo.start();
+      this.musicNodes.push(osc, lfo, gain, lfoGain);
+    }
+  }
+
+  stopMusic(): void {
+    if (!this.ctx) return;
+    const ct = this.ctx.currentTime;
+    for (const node of this.musicNodes) {
+      if ("gain" in node) {
+        const g = node as GainNode;
+        g.gain.cancelScheduledValues(ct);
+        g.gain.linearRampToValueAtTime(0, ct + 0.5);
+      }
+      if (node instanceof OscillatorNode) node.stop(ct + 0.6);
+    }
+    this.musicNodes = [];
+  }
 }
 
 export const sound = new SoundEngine();

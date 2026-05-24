@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { sound } from "../core/Sound";
+import { saveHighScore, loadHighScore } from "../core/HighScore";
 
 interface GameOverData {
   wave: number;
@@ -19,6 +20,15 @@ export class GameOverScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const cx = width / 2;
     const cy = height / 2;
+
+    const beatHigh = saveHighScore({
+      score: data.score,
+      floor: data.wave,
+      bestCombo: data.best,
+      kills: data.kills,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    const hs = loadHighScore();
 
     // Dim backdrop
     this.add
@@ -53,6 +63,24 @@ export class GameOverScene extends Phaser.Scene {
         color: "#aaaaaa",
       })
       .setOrigin(0.5);
+
+    if (beatHigh) {
+      this.add
+        .text(cx, cy - 45, "★ NEW HIGH SCORE ★", {
+          fontFamily: FONT,
+          fontSize: "18px",
+          color: "#ffe066",
+        })
+        .setOrigin(0.5);
+    } else if (hs) {
+      this.add
+        .text(cx, cy - 45, `high: ${hs.score.toString().padStart(5, "0")}`, {
+          fontFamily: FONT,
+          fontSize: "14px",
+          color: "#888",
+        })
+        .setOrigin(0.5);
+    }
 
     const lines = [
       `KILLS         ${data.kills}`,

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { sound } from "../core/Sound";
+import { saveHighScore } from "../core/HighScore";
 
 interface ClearData {
   levelIndex: number;
@@ -21,6 +22,15 @@ export class LevelClearedScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const cx = width / 2;
     const cy = height / 2;
+
+    // Persist high score on successful clears too
+    saveHighScore({
+      score: data.score,
+      floor: data.levelIndex + 1,
+      bestCombo: data.best,
+      kills: data.kills,
+      date: new Date().toISOString().slice(0, 10),
+    });
 
     // Fade in (dark backdrop)
     this.add

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { sound } from "../core/Sound";
+import { loadHighScore } from "../core/HighScore";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -77,11 +78,24 @@ export class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
+    // High score display (if one exists)
+    const hs = loadHighScore();
+    if (hs) {
+      this.add
+        .text(width / 2, height - 60, `HIGH SCORE  ${hs.score.toString().padStart(5, "0")}  ·  floor ${hs.floor}`, {
+          fontFamily: font,
+          fontSize: "13px",
+          color: "#ffe066",
+        })
+        .setOrigin(0.5);
+    }
+
     const beginGame = (): void => {
       // AudioContext requires a user gesture before audio can play.
       sound.init();
       sound.resume();
       sound.uiClick();
+      sound.startMusic();
       this.scene.start("Game", { levelIndex: 0 });
     };
     this.input.once("pointerdown", beginGame);
