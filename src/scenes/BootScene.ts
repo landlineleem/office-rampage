@@ -65,7 +65,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("guard_arm", 26, 8, (g) => this.drawGuardArm(g));
 
     // Projectiles
-    this.makeTexture("staple", 16, 10, (g) => this.drawStaple(g));
+    this.makeTexture("staple", 20, 12, (g) => this.drawStaple(g));
     this.makeTexture("guard_bullet", 8, 4, (g) => this.drawGuardBullet(g));
 
     // Muzzle flash sprite (one-shot bright burst at the barrel)
@@ -412,28 +412,32 @@ export class BootScene extends Phaser.Scene {
 
   // ---------- Projectiles ----------
   private drawStaple(g: Phaser.GameObjects.Graphics): void {
-    // 16 x 10 — actual staple shape. Bullets travel +x, so the bend is
-    // on the LEFT (the bullet's tail) and the two prongs lead RIGHT
-    // toward whatever they're about to hit.
-    // Spine / bend (back of staple)
+    // 20 x 12 — silver office staple, bend on the LEFT (back), two
+    // prongs leading RIGHT in the travel direction. Bigger + a darker
+    // outline so it reads as a metal staple at a glance.
+    // Outline first
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(0, 0, 5, 12);   // spine outline
+    g.fillRect(5, 0, 14, 3);   // top prong outline
+    g.fillRect(5, 9, 14, 3);   // bottom prong outline
+    // Silver fill (inset by 1px to create a 1px dark border)
     g.fillStyle(0xd6d6dc, 1);
-    g.fillRect(0, 0, 4, 10);
-    // Top prong
-    g.fillRect(4, 0, 11, 2);
-    // Bottom prong
-    g.fillRect(4, 8, 11, 2);
-    // Sharper tips
-    g.fillRect(14, 0, 2, 3);
-    g.fillRect(14, 7, 2, 3);
-    // Top highlight (catches light)
+    g.fillRect(1, 1, 3, 10);   // spine
+    g.fillRect(5, 1, 13, 1);   // top prong
+    g.fillRect(5, 10, 13, 1);  // bottom prong
+    // Inner fill for prongs
+    g.fillStyle(0xb8b8c0, 1);
+    g.fillRect(5, 2, 13, 1);
+    g.fillRect(5, 8, 13, 1);
+    // Bright highlight along the top of the spine
     g.fillStyle(0xf2f2f6, 1);
-    g.fillRect(0, 0, 16, 1);
-    g.fillRect(0, 0, 1, 10);
-    // Bottom shadow
-    g.fillStyle(0x9a9aa0, 1);
-    g.fillRect(0, 9, 16, 1);
-    g.fillRect(3, 8, 13, 1);
-    g.fillRect(3, 1, 13, 1);
+    g.fillRect(1, 1, 3, 1);
+    // Brushed-metal highlight stripe
+    g.fillRect(6, 1, 12, 1);
+    // Pointed tips
+    g.fillStyle(0xeaeaee, 1);
+    g.fillRect(18, 1, 1, 2);
+    g.fillRect(18, 9, 1, 2);
   }
 
   private drawGuardBullet(g: Phaser.GameObjects.Graphics): void {

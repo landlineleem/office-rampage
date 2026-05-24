@@ -208,7 +208,7 @@ export class PlayerWeapon {
       const body = b.body as Phaser.Physics.Arcade.Body;
       body.setAllowGravity(false);
       body.reset(baseSpawnX, baseSpawnY);
-      body.setSize(10, 6).setOffset(3, 2);
+      body.setSize(14, 8).setOffset(3, 2);
       b.rotation = angle;
       const sp = this.config.bulletSpeed;
       body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
