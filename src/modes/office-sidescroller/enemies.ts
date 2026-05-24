@@ -340,7 +340,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   damage(amount = 1): boolean {
     this.hp -= amount;
-    this.setTint(0xffffff);
+    // Flash bright red regardless of base tint — the white flash from
+    // before was invisible on Security guards (whose base tint is white).
+    this.setTint(0xff5050);
     this.scene.time.delayedCall(70, () => this.setTint(this.config.tint));
     return this.hp <= 0;
   }
