@@ -91,6 +91,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("file_cabinet", 76, 108, (g) => this.drawFileCabinet(g));
     this.makeTexture("low_obstacle", 160, 66, (g) => this.drawLowObstacle(g));
     this.makeTexture("elevator", 168, 250, (g) => this.drawElevator(g));
+    this.makeTexture("elevator_door", 76, 222, (g) => this.drawElevatorDoor(g));
     this.makeTexture("plant", 88, 144, (g) => this.drawFloorPlant(g));
     this.makeTexture("column", 60, 380, (g) => this.drawColumn(g));
     this.makeTexture("monitor_wall", 120, 72, (g) => this.drawWallMonitor(g));
@@ -575,7 +576,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawElevator(g: Phaser.GameObjects.Graphics): void {
-    // 168 x 250 — tall imposing elevator door, brushed steel, lit floor sign.
+    // 168 x 250 — elevator FRAME only (no doors). Doors are separate
+    // animated sprites placed on top inside the dark cab area.
     const W = 168, H = 250;
     // Wall recess (dark) — elevator sits inside this frame
     g.fillStyle(0x18181f, 1);
@@ -586,26 +588,46 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x4a4d58, 1);
     g.fillRect(8, 8, W - 16, 6);
     g.fillRect(8, H - 14, W - 16, 6);
-    // Inner doors (brushed steel)
-    g.fillStyle(0xb8bbc4, 1);
+    // Open cab interior (dark)
+    g.fillStyle(0x0d0e12, 1);
     g.fillRect(16, 14, W - 32, H - 28);
-    // Subtle vertical brushed lines
-    g.fillStyle(0xa0a3ac, 0.7);
-    for (let x = 20; x < W - 16; x += 6) g.fillRect(x, 14, 1, H - 28);
-    // Door split (dark vertical line)
+    // Soft cab interior glow
+    g.fillStyle(0xfaf0c8, 0.06);
+    g.fillRect(16, 14, W - 32, H - 28);
+    // Floor of the cab inside (lit)
     g.fillStyle(0x2a2d36, 1);
-    g.fillRect(W / 2 - 1, 14, 2, H - 28);
+    g.fillRect(16, H - 22, W - 32, 8);
     // Floor indicator panel (above door)
     g.fillStyle(0x18181f, 1);
     g.fillRect(W / 2 - 24, -22, 48, 18);
-    // Lit floor number
     g.fillStyle(0xe8b33a, 1);
     g.fillRect(W / 2 - 18, -18, 36, 10);
     g.fillStyle(0x18181f, 1);
-    g.fillRect(W / 2 - 4, -16, 8, 6); // "1" digit
+    g.fillRect(W / 2 - 4, -16, 8, 6); // "1" digit placeholder
     // Up arrow indicator
     g.fillStyle(0x6abd5a, 1);
     g.fillTriangle(W - 28, 28, W - 18, 16, W - 8, 28);
+  }
+
+  private drawElevatorDoor(g: Phaser.GameObjects.Graphics): void {
+    // 76 x 222 — one door panel. Two of these slide together for the
+    // elevator's closing animation. Brushed steel.
+    const W = 76, H = 222;
+    g.fillStyle(0xb8bbc4, 1);
+    g.fillRect(0, 0, W, H);
+    // Top + bottom shadow bands
+    g.fillStyle(0x9a9da4, 1);
+    g.fillRect(0, 0, W, 4);
+    g.fillRect(0, H - 4, W, 4);
+    // Vertical brushed lines
+    g.fillStyle(0xa0a3ac, 0.7);
+    for (let x = 4; x < W; x += 6) g.fillRect(x, 4, 1, H - 8);
+    // Inner edge shadow (where the doors meet)
+    g.fillStyle(0x6a6d76, 1);
+    g.fillRect(W - 4, 4, 4, H - 8);
+    // Handle dimple
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(W - 12, H / 2 - 12, 4, 24);
   }
 
   private drawFloorPlant(g: Phaser.GameObjects.Graphics): void {

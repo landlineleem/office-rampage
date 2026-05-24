@@ -181,18 +181,11 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Elevator trigger
+    // Elevator trigger — runs the transition animation, then advances
     this.physics.add.overlap(this.player, this.elevator, () => {
       if (this.cleared) return;
       this.cleared = true;
-      this.scene.start("LevelCleared", {
-        levelIndex: this.levelIndex,
-        levelName: this.level.name,
-        hasNext: hasNextLevel(this.levelIndex),
-        kills: this.combo.totalKills,
-        best: this.combo.best,
-        score: this.combo.score,
-      });
+      this.runElevatorTransition();
     });
 
     this.hud = new HUD(this);
@@ -471,8 +464,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private elevatorLeftDoor!: Phaser.GameObjects.Image;
+  private elevatorRightDoor!: Phaser.GameObjects.Image;
+
   private buildElevator(lvl: LevelData): void {
-    // Elevator texture is 100x130. Anchor bottom to ground (lvl.elevator.y).
+    // Frame (no doors baked in; doors are separate sprites below)
     this.elevator = this.physics.add.sprite(
       lvl.elevator.x,
       lvl.elevator.y,
@@ -484,12 +480,30 @@ export class GameScene extends Phaser.Scene {
     body.setImmovable(true);
     this.elevator.setDepth(5);
 
+    // Door panels — start in OPEN position (slid into the side walls
+    // so the cab interior is visible). Animation slides them together.
+    const ex = lvl.elevator.x;
+    const ey = lvl.elevator.y;
+    const doorTop = ey - 236;
+    // Open positions: each door tucked off-screen behind its frame side
+    this.elevatorLeftDoor = this.add
+      .image(ex - 66, doorTop, "elevator_door")
+      .setOrigin(1, 0)
+      .setDepth(6);
+    this.elevatorRightDoor = this.add
+      .image(ex + 66, doorTop, "elevator_door")
+      .setOrigin(0, 0)
+      .setFlipX(true)
+      .setDepth(6);
+
     // Floating "GOAL ▼" hint above the elevator
     this.add
-      .text(lvl.elevator.x, lvl.elevator.y - 160, "GOAL ▼", {
+      .text(ex, ey - 280, "GOAL ▼", {
         fontFamily: "ui-monospace, monospace",
         fontSize: "18px",
         color: "#ffe066",
+        stroke: "#1a1d24",
+        strokeThickness: 3,
       })
       .setOrigin(0.5)
       .setDepth(5);
@@ -499,10 +513,82 @@ export class GameScene extends Phaser.Scene {
     this.fx.playerDeath();
     this.time.delayedCall(600, () => {
       this.scene.start("GameOver", {
-        wave: 1,
+        wave: this.levelIndex + 1,
         kills: this.combo.totalKills,
         best: this.combo.best,
         score: this.combo.score,
+      });
+    });
+  }
+
+  private runElevatorTransition(): void {
+    const ex = this.level.elevator.x;
+    const ey = this.level.elevator.y;
+
+    // Player walks into the elevator cab (visual only — input is blocked
+    // by `this.cleared = true` in update())
+    this.tweens.add({
+      targets: this.player,
+      x: ex,
+      y: ey,
+      duration: 500,
+      ease: "Cubic.easeOut",
+    });
+    // Brief player fade as they "step inside"
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.6,
+      duration: 500,
+      delay: 200,
+    });
+
+    this.hud.showBanner("FLOOR CLEARED", 1400);
+
+    // Doors close after the walk-in
+    this.time.delayedCall(550, () => {
+      sound.elevatorDing();
+      const doorTop = ey - 236;
+      // Left door slides right to meet the center
+      this.tweens.add({
+        targets: this.elevatorLeftDoor,
+        x: ex,
+        duration: 700,
+        ease: "Cubic.easeInOut",
+      });
+      // Right door slides left to meet the center
+      this.tweens.add({
+        targets: this.elevatorRightDoor,
+        x: ex,
+        duration: 700,
+        ease: "Cubic.easeInOut",
+      });
+      // Slight cab shake during close
+      this.time.delayedCall(550, () => this.fx.shake(0.004, 200));
+      // Mark doorTop as referenced for readability
+      void doorTop;
+    });
+
+    // Fade screen to black, then transition
+    this.time.delayedCall(1500, () => {
+      const fade = this.add
+        .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(2000);
+      this.tweens.add({
+        targets: fade,
+        alpha: 1,
+        duration: 500,
+        onComplete: () => {
+          this.scene.start("LevelCleared", {
+            levelIndex: this.levelIndex,
+            levelName: this.level.name,
+            hasNext: hasNextLevel(this.levelIndex),
+            kills: this.combo.totalKills,
+            best: this.combo.best,
+            score: this.combo.score,
+          });
+        },
       });
     });
   }
