@@ -42,22 +42,30 @@ export class LevelClearedScene extends Phaser.Scene {
 
     sound.elevatorDing();
 
+    const isVictory = !data.hasNext;
     this.add
-      .text(cx, cy - 150, "FLOOR CLEARED", {
+      .text(cx, cy - 150, isVictory ? "VICTORY" : "FLOOR CLEARED", {
         fontFamily: FONT,
-        fontSize: "52px",
-        color: "#6abd5a",
+        fontSize: isVictory ? "64px" : "52px",
+        color: isVictory ? "#ffe066" : "#6abd5a",
         stroke: "#1a1a1a",
         strokeThickness: 5,
       })
       .setOrigin(0.5);
 
     this.add
-      .text(cx, cy - 95, `${data.levelName} → secured`, {
-        fontFamily: FONT,
-        fontSize: "18px",
-        color: "#aaaaaa",
-      })
+      .text(
+        cx,
+        cy - 95,
+        isVictory
+          ? "The CEO has been processed. Casual Friday begins."
+          : `${data.levelName} → secured`,
+        {
+          fontFamily: FONT,
+          fontSize: "16px",
+          color: "#aaaaaa",
+        }
+      )
       .setOrigin(0.5);
 
     const lines = [
@@ -75,10 +83,10 @@ export class LevelClearedScene extends Phaser.Scene {
         .setOrigin(0.5);
     });
 
-    const buttonText = data.hasNext ? "▶ NEXT FLOOR" : "▶ REPLAY";
+    const buttonText = data.hasNext ? "▶ NEXT FLOOR" : "▶ START AGAIN";
     const subtitle = data.hasNext
       ? "elevator going up..."
-      : "you reached the top. for now.";
+      : "score saved. press to start a fresh run.";
 
     this.add
       .text(cx, cy + 80, subtitle, {

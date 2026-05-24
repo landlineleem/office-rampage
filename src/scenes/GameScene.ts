@@ -69,6 +69,9 @@ export class GameScene extends Phaser.Scene {
   private inheritedScore = 0;
   private inheritedKills = 0;
   private inheritedBestCombo = 0;
+  private paused = false;
+  private pauseOverlay?: Phaser.GameObjects.Container;
+  private lastBossNagAt = -Infinity;
 
   constructor() {
     super({ key: "Game" });
@@ -227,10 +230,19 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Elevator trigger — only opens once the floor is actually cleared
-    // (all guards dead AND the player picked up any guaranteed drop).
+    // Elevator trigger — only opens once the floor is actually cleared.
+    // On boss floors (anything with a CEO enemy in level data), the
+    // elevator is gated until the boss is dead.
     this.physics.add.overlap(this.player, this.elevator, () => {
       if (this.cleared) return;
+      if (this.bossAlive()) {
+        // Brief reminder on screen
+        if (this.time.now - this.lastBossNagAt > 2000) {
+          this.hud.showBanner("DEFEAT THE CEO FIRST", 1200);
+          this.lastBossNagAt = this.time.now;
+        }
+        return;
+      }
       this.cleared = true;
       this.runElevatorTransition();
     });
@@ -269,6 +281,13 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-TWO", () => this.selectWeapon(1));
     this.input.keyboard?.on("keydown-THREE", () => this.selectWeapon(2));
     this.input.keyboard?.on("keydown-FOUR", () => this.selectWeapon(3));
+    // QoL keys
+    this.input.keyboard?.on("keydown-P", () => this.togglePause());
+    this.input.keyboard?.on("keydown-ESC", () => this.togglePause());
+    this.input.keyboard?.on("keydown-M", () => {
+      sound.toggleMute();
+      this.hud.showBanner("MUTE TOGGLED", 800);
+    });
 
     // Semi-auto trigger fires once per click (pointerdown). Full-auto
     // is handled by the held-button check in update().
@@ -334,6 +353,8 @@ export class GameScene extends Phaser.Scene {
         corpse.setScale(e.config.scale);
         this.corpses.add(corpse);
         this.combo.registerKill(this.time.now, e.config.scoreValue);
+        // Floating score popup at the kill location
+        this.spawnScorePopup(dx, dy - 80, e.config.scoreValue * this.combo.count);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
           this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
@@ -388,6 +409,77 @@ export class GameScene extends Phaser.Scene {
       });
     }
     this.particles.smokePuff(ds.x, groundY - 30, 2);
+  }
+
+  private bossAlive(): boolean {
+    const children = this.guards.getChildren() as Enemy[];
+    return children.some((e) => e.active && e.config.name === "The CEO");
+  }
+
+  private spawnScorePopup(x: number, y: number, value: number): void {
+    const text = this.add
+      .text(x, y, `+${value}`, {
+        fontFamily: "ui-monospace, monospace",
+        fontSize: "16px",
+        color: value >= 1000 ? "#ff8030" : "#ffe066",
+        stroke: "#1a1d24",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(800);
+    this.tweens.add({
+      targets: text,
+      y: y - 60,
+      alpha: 0,
+      duration: 900,
+      ease: "Cubic.easeOut",
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  private togglePause(): void {
+    if (this.cleared || this.player.hp <= 0) return;
+    if (this.paused) {
+      this.scene.resume();
+      this.physics.world.resume();
+      this.pauseOverlay?.destroy();
+      this.pauseOverlay = undefined;
+      this.paused = false;
+      return;
+    }
+    this.paused = true;
+    this.physics.world.pause();
+    sound.uiClick();
+    const { width, height } = this.scale;
+    const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.7)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(2500);
+    const title = this.add.text(width / 2, height / 2 - 100, "PAUSED", {
+      fontFamily: "ui-monospace, monospace",
+      fontSize: "48px",
+      color: "#ffe066",
+      stroke: "#1a1d24",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2501);
+    const hint = this.add.text(width / 2, height / 2, [
+      "A / D · run",
+      "W · jump",
+      "S · slide",
+      "Mouse · aim   ·   Left Click · fire",
+      "SPACE · slow-mo",
+      "1 / 2 / 3 / 4 · swap weapon",
+      "P or ESC · pause   ·   M · mute",
+      "",
+      "press P or ESC to resume",
+    ], {
+      fontFamily: "ui-monospace, monospace",
+      fontSize: "16px",
+      color: "#dddddd",
+      align: "center",
+      lineSpacing: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2501);
+    const container = this.add.container(0, 0, [bg, title, hint]).setScrollFactor(0).setDepth(2500);
+    this.pauseOverlay = container;
+    // Pause the scene update — but keep tweens so the pause UI renders cleanly
   }
 
   private spawnEnemyByKind(kind: EnemyKind, x: number, y: number): Enemy | null {
@@ -445,7 +537,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    if (this.player.hp <= 0 || this.cleared) return;
+    if (this.player.hp <= 0 || this.cleared || this.paused) return;
 
     // --- Slow-mo on SPACE ---
     const inWithdrawal = time < this.withdrawalUntil;
