@@ -299,8 +299,16 @@ export class GameScene extends Phaser.Scene {
       if (w.config.fireMode === "semi") this.tryFireCurrentWeapon(this.time.now);
     });
 
-    // Floor intro banner
-    this.hud.showBanner(`FLOOR ${this.levelIndex + 1} · ${this.level.name.toUpperCase()}`, 1600);
+    // Floor intro banner — boss floor gets a special call-out
+    const isBossFloor = this.level.enemies.some((e) => e.kind === "ceo");
+    if (isBossFloor) {
+      this.hud.showBanner("FINAL FLOOR · THE CEO AWAITS", 2200);
+    } else {
+      this.hud.showBanner(
+        `FLOOR ${this.levelIndex + 1} · ${this.level.name.toUpperCase()}`,
+        1600
+      );
+    }
   }
 
   private tryFireCurrentWeapon(time: number): void {
@@ -361,6 +369,20 @@ export class GameScene extends Phaser.Scene {
         if (isHeavy || dropRoll < 0.08) {
           const pickup = new WeaponPickup(this, dx, dy - 40, "health_pack");
           this.pickups.add(pickup);
+        }
+        // Boss defeat — cinematic moment
+        if (e.config.name === "The CEO") {
+          this.fx.flash(0xffe066, 600, 0.45);
+          this.fx.shake(0.025, 600);
+          this.hud.showBanner("CEO DEFEATED", 2200);
+          for (let i = 0; i < 8; i++) {
+            this.time.delayedCall(i * 70, () => {
+              this.particles.guardDeath(
+                dx + Phaser.Math.Between(-80, 80),
+                dy - 30 + Phaser.Math.Between(-30, 30)
+              );
+            });
+          }
         }
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
