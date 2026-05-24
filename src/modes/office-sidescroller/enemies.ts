@@ -168,6 +168,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // While stunned, AI doesn't override velocity — lets a hit's knockback
   // actually be visible instead of being clobbered the next frame.
   stunUntil = 0;
+  // CEO only — flips true when HP drops below 50% the first time, swaps
+  // the enemy into a faster / harder-hitting phase.
+  enraged = false;
+  onEnrage?: () => void;
   private arm: Phaser.GameObjects.Sprite;
   private laser?: Phaser.GameObjects.Graphics;
   private walkPhase = 0;
@@ -277,7 +281,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.lastShotAt = -Infinity;
       }
       if (this.aiState === "firing" && !this.config.meleeOnly) {
-        if (time - this.lastShotAt >= this.config.fireRateMs) {
+        // Effective fire rate + damage scale with rage (CEO only)
+        const fireRate = this.enraged
+          ? this.config.fireRateMs * 0.5
+          : this.config.fireRateMs;
+        const bulletDmg = this.enraged
+          ? this.config.bulletDamage + 5
+          : this.config.bulletDamage;
+        if (time - this.lastShotAt >= fireRate) {
           this.lastShotAt = time;
           const angle = Math.atan2(dy, dx);
           const shoulderY = this.y + BASE_SHOULDER_OFFSET * this.config.scale;
@@ -290,7 +301,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             angle,
             this.config.bulletSpeed,
             this.config.bulletLifeMs,
-            this.config.bulletDamage
+            bulletDmg
           );
         }
       }
@@ -361,15 +372,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   damage(amount = 1, knockbackX = 0): boolean {
     this.hp -= amount;
     this.setTint(0xff5050);
-    this.scene.time.delayedCall(70, () => this.setTint(this.config.tint));
-    // Knockback: small horizontal push, scaled inversely by enemy size
-    // so heavies + CEO barely budge but interns get knocked around.
+    // Return-to-base tint accounts for rage state on CEO
+    const baseTint = this.enraged ? 0xc73a3a : this.config.tint;
+    this.scene.time.delayedCall(70, () => this.setTint(baseTint));
     if (knockbackX !== 0) {
       const body = this.body as Phaser.Physics.Arcade.Body;
       const scale = 1 / Math.max(0.6, this.config.scale);
       body.setVelocityX(knockbackX * scale);
       body.setVelocityY(-80 * scale);
       this.stunUntil = this.scene.time.now + 120;
+    }
+    // CEO phase 2 — trigger once when HP first drops to 50%
+    if (
+      this.config.name === "The CEO" &&
+      !this.enraged &&
+      this.hp <= this.config.hp * 0.5 &&
+      this.hp > 0
+    ) {
+      this.enraged = true;
+      this.setTint(0xc73a3a);
+      this.onEnrage?.();
     }
     return this.hp <= 0;
   }

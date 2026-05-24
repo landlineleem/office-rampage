@@ -616,7 +616,17 @@ export class GameScene extends Phaser.Scene {
       case "ceo": config = CEO_BOSS; break;
       default: return null;
     }
-    return new Enemy(this, x, y, this.guardGun, config);
+    const enemy = new Enemy(this, x, y, this.guardGun, config);
+    if (kind === "ceo") {
+      // Boss rage hook: drop a banner + red flash when the CEO crosses
+      // the 50% HP threshold.
+      enemy.onEnrage = () => {
+        this.hud.showBanner("CEO ENRAGED", 2200);
+        this.fx.flash(0xc73a3a, 500, 0.4);
+        this.fx.shake(0.018, 400);
+      };
+    }
+    return enemy;
   }
 
   private onPickup(p: WeaponPickup): void {
