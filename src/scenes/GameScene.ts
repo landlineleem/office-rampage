@@ -686,7 +686,7 @@ export class GameScene extends Phaser.Scene {
 
     // Enemy AI
     this.guards.getChildren().forEach((c) => {
-      const g = c as SecurityGuard;
+      const g = c as Enemy;
       if (!g.active) return;
       g.think(time, delta, this.player.x, this.player.y, worldFactor);
     });
