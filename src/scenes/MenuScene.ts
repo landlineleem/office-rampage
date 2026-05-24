@@ -51,8 +51,8 @@ export class MenuScene extends Phaser.Scene {
       .text(
         width / 2,
         height / 2 - 20,
-        "A / D move · W jump · S slide · MOUSE aim · LMB shoot · SPACE slow-mo",
-        { fontFamily: font, fontSize: "13px", color: "#dddddd" }
+        "A/D run · W jump (×2) · S slide · MOUSE aim · LMB fire · SPACE slow-mo · 1-4 weapons",
+        { fontFamily: font, fontSize: "12px", color: "#dddddd" }
       )
       .setOrigin(0.5);
 

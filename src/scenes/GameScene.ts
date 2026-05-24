@@ -540,8 +540,8 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(2501);
     const hint = this.add.text(width / 2, height / 2, [
       "A / D · run",
-      "W · jump",
-      "S · slide",
+      "W · jump  (press again mid-air for double jump)",
+      "S · slide   (can also fire during slide)",
       "Mouse · aim   ·   Left Click · fire",
       "SPACE · slow-mo",
       "1 / 2 / 3 / 4 · swap weapon",
