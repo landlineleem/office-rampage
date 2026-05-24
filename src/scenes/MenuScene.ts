@@ -37,7 +37,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height / 2 - 80, "v0.3 · the lobby", {
+      .text(width / 2, height / 2 - 80, "v0.26 · 2 floors of corporate hell", {
         fontFamily: font,
         fontSize: "14px",
         color: "#aaa",
@@ -82,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
       sound.init();
       sound.resume();
       sound.uiClick();
-      this.scene.start("Game");
+      this.scene.start("Game", { levelIndex: 0 });
     };
     this.input.once("pointerdown", beginGame);
     this.input.keyboard?.once("keydown-SPACE", beginGame);
