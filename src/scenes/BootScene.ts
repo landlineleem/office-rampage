@@ -71,6 +71,7 @@ export class BootScene extends Phaser.Scene {
     // Muzzle flash sprite (one-shot bright burst at the barrel)
     this.makeTexture("muzzle", 16, 12, (g) => this.drawMuzzle(g));
     this.makeTexture("muzzle_flash", 40, 24, (g) => this.drawMuzzleFlash(g));
+    this.makeTexture("bullet_hole", 10, 8, (g) => this.drawBulletHole(g));
 
     // Particle textures
     this.makeTexture("particle_spark", 6, 6, (g) => this.drawParticleSpark(g));
@@ -453,6 +454,17 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(0, 6, 14, 0, 14, 12);
     g.fillStyle(0xffe040, 0.6);
     g.fillCircle(4, 6, 3);
+  }
+
+  private drawBulletHole(g: Phaser.GameObjects.Graphics): void {
+    // 10 x 8 — dark staple-impact mark for the bullet decal
+    g.fillStyle(0x12141b, 0.85);
+    g.fillRect(4, 0, 2, 8);   // staple spine indent
+    g.fillRect(0, 0, 10, 2);  // top mark
+    g.fillRect(0, 6, 10, 2);  // bottom mark
+    g.fillStyle(0x2a2d36, 0.6);
+    g.fillRect(0, 2, 10, 1);
+    g.fillRect(0, 5, 10, 1);
   }
 
   private drawMuzzleFlash(g: Phaser.GameObjects.Graphics): void {

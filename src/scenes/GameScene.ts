@@ -61,6 +61,7 @@ export class GameScene extends Phaser.Scene {
   }> = [];
   private vignette!: Phaser.GameObjects.Image;
   private slowMoTint!: Phaser.GameObjects.Rectangle;
+  private dangerVignette!: Phaser.GameObjects.Image;
   private crosshair!: Phaser.GameObjects.Image;
   private keys!: PlayerKeys;
   private level!: LevelData;
@@ -76,6 +77,9 @@ export class GameScene extends Phaser.Scene {
   private pauseOverlay?: Phaser.GameObjects.Container;
   private lastBossNagAt = -Infinity;
   private bossEngaged = false;
+  // Bullet hole decals — rolling buffer, oldest fades out as new ones spawn
+  private decals: Phaser.GameObjects.Image[] = [];
+  private readonly MAX_DECALS = 60;
 
   constructor() {
     super({ key: "Game" });
@@ -203,6 +207,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.guardGun.bullets, this.platforms, (bullet) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       this.particles.impactSparks(b.x, b.y, 3);
+      this.spawnBulletDecal(b.x, b.y, b.rotation);
       this.guardGun.recycle(b);
     });
 
@@ -224,7 +229,7 @@ export class GameScene extends Phaser.Scene {
         sound.playerHurt();
         this.particles.playerHit(hx, hy);
         this.fx.playerHurt();
-        this.combo.break();
+        this.breakCombo();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
     });
@@ -238,7 +243,7 @@ export class GameScene extends Phaser.Scene {
       if (this.player.takeDamage(now, e.config.contactDamage)) {
         sound.playerHurt();
         this.fx.playerHurt();
-        this.combo.break();
+        this.breakCombo();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
     });
@@ -276,6 +281,15 @@ export class GameScene extends Phaser.Scene {
     this.slowMoTint.setScrollFactor(0);
     this.slowMoTint.setDepth(1399);
     this.slowMoTint.setBlendMode(Phaser.BlendModes.OVERLAY);
+
+    // Danger vignette — same texture as the slow-mo vignette but tinted
+    // red. Alpha pulses with a heartbeat-ish rhythm when HP gets low.
+    this.dangerVignette = this.add.image(0, 0, "vignette");
+    this.dangerVignette.setOrigin(0, 0);
+    this.dangerVignette.setScrollFactor(0);
+    this.dangerVignette.setDepth(1398);
+    this.dangerVignette.setTint(0xff2030);
+    this.dangerVignette.setAlpha(0);
 
     // Custom crosshair (hides system cursor inside the game canvas)
     this.input.setDefaultCursor("none");
@@ -347,10 +361,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private registerWeaponColliders(weapon: PlayerWeapon): void {
-    // Bullets that hit a platform spark + recycle
+    // Bullets that hit a platform spark + decal + recycle
     this.physics.add.collider(weapon.bullets, this.platforms, (bullet) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       this.particles.impactSparks(b.x, b.y, 3);
+      this.spawnBulletDecal(b.x, b.y, b.rotation);
       weapon.recycle(b);
     });
     // Bullets that hit a guard apply damage / spawn the kill effects
@@ -539,6 +554,52 @@ export class GameScene extends Phaser.Scene {
     const container = this.add.container(0, 0, [bg, title, hint]).setScrollFactor(0).setDepth(2500);
     this.pauseOverlay = container;
     // Pause the scene update — but keep tweens so the pause UI renders cleanly
+  }
+
+  private breakCombo(): void {
+    const before = this.combo.count;
+    this.combo.break();
+    if (before >= 3) {
+      // Floating red "COMBO LOST x5" text near the player
+      const text = this.add
+        .text(this.player.x, this.player.y - 140, `COMBO LOST x${before}`, {
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "16px",
+          color: "#ff5050",
+          stroke: "#1a1d24",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 1)
+        .setDepth(800);
+      this.tweens.add({
+        targets: text,
+        y: this.player.y - 200,
+        alpha: 0,
+        duration: 900,
+        ease: "Cubic.easeOut",
+        onComplete: () => text.destroy(),
+      });
+    }
+  }
+
+  private spawnBulletDecal(x: number, y: number, angle: number): void {
+    const decal = this.add
+      .image(x, y, "bullet_hole")
+      .setRotation(angle)
+      .setDepth(2) // behind player + props but in front of wall
+      .setAlpha(0.85);
+    this.decals.push(decal);
+    if (this.decals.length > this.MAX_DECALS) {
+      const oldest = this.decals.shift();
+      if (oldest) {
+        this.tweens.add({
+          targets: oldest,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => oldest.destroy(),
+        });
+      }
+    }
   }
 
   private spawnEnemyByKind(kind: EnemyKind, x: number, y: number): Enemy | null {
@@ -740,6 +801,16 @@ export class GameScene extends Phaser.Scene {
     );
     // Boss HP bar — show/update if a boss is alive
     this.updateBossUi();
+
+    // Danger vignette — fade in below 30% HP, pulse with heartbeat
+    const hpPct = this.player.hp / SideScrollerConfig.player.maxHP;
+    if (hpPct < 0.3 && this.player.hp > 0) {
+      const baseAlpha = (0.3 - hpPct) / 0.3 * 0.55; // 0 at 30%, 0.55 at 0%
+      const pulse = 0.85 + Math.sin(time * 0.008) * 0.15;
+      this.dangerVignette.setAlpha(baseAlpha * pulse);
+    } else {
+      this.dangerVignette.setAlpha(0);
+    }
 
     // Camera lookahead — subtle shift toward the aim cursor so you can
     // see more of the world in the direction you're aiming. Smoothed.
