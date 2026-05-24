@@ -45,6 +45,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   private walkPhase = 0;
   private hasRealWalkFrames = false;
   private hasRealJumpFrame = false;
+  private hasRealFallFrame = false;
   private currentPoseKey = "";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -57,6 +58,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     this.hasRealWalkFrames =
       this.isRealArt("player_walk_0") && this.isRealArt("player_walk_1");
     this.hasRealJumpFrame = this.isRealArt("player_jump");
+    this.hasRealFallFrame = this.isRealArt("player_fall");
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setGravityY(SideScrollerConfig.player.gravity);
@@ -190,8 +192,11 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     let key = "player_idle";
     if (!grounded && this.hasRealJumpFrame) {
-      key = body.velocity.y < 0 ? "player_jump" : "player_fall";
-      if (!this.scene.textures.exists(key)) key = "player_idle";
+      // Use player_jump for both rising and falling unless a real
+      // player_fall sprite exists separately. Avoids flashing the
+      // procedural fallback during the descent of a jump.
+      const isFalling = body.velocity.y >= 0;
+      key = isFalling && this.hasRealFallFrame ? "player_fall" : "player_jump";
     } else if (grounded && Math.abs(body.velocity.x) > 10 && this.hasRealWalkFrames) {
       const f = Math.floor(this.walkPhase) % 2;
       key = f === 0 ? "player_walk_0" : "player_walk_1";
