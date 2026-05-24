@@ -375,6 +375,47 @@ class SoundEngine {
     }
     this.musicNodes = [];
   }
+
+  // ---------- Boss intensity layer ----------
+  // While active, schedules a pulsing kick drum on top of the ambient
+  // music. Kicks every 700ms (~86 BPM) for tension.
+
+  private bossIntensityActive = false;
+
+  startBossIntensity(): void {
+    if (!this.ctx || this.bossIntensityActive) return;
+    this.bossIntensityActive = true;
+    this.scheduleBossKick();
+  }
+
+  stopBossIntensity(): void {
+    this.bossIntensityActive = false;
+  }
+
+  private scheduleBossKick(): void {
+    if (!this.bossIntensityActive || !this.ctx || !this.slowMoBus) return;
+    if (this.muted) {
+      // still tick the schedule so we resume cleanly if unmuted
+      setTimeout(() => this.scheduleBossKick(), 700);
+      return;
+    }
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    // Kick body — sine descending pitch + envelope
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.exponentialRampToValueAtTime(38, now + 0.09);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(this.slowMoBus);
+    osc.start(now);
+    osc.stop(now + 0.18);
+    setTimeout(() => this.scheduleBossKick(), 700);
+  }
 }
 
 export const sound = new SoundEngine();
