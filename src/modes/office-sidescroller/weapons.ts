@@ -2,6 +2,77 @@ import Phaser from "phaser";
 import { SideScrollerConfig } from "./config";
 import { sound } from "../../core/Sound";
 
+// Trail + glow management shared by both weapons. We attach a trail
+// sprite and a glow sprite to each bullet so the visual lines up with
+// where the projectile actually is. Sprites are cached on the bullet
+// via setData so the same pool-recycled bullet keeps its trail across
+// fires.
+
+function ensureTrail(
+  scene: Phaser.Scene,
+  bullet: Phaser.Physics.Arcade.Sprite,
+  trailKey: string
+): { trail: Phaser.GameObjects.Sprite; glow: Phaser.GameObjects.Sprite } {
+  let trail = bullet.getData("trail") as Phaser.GameObjects.Sprite | undefined;
+  let glow = bullet.getData("glow") as Phaser.GameObjects.Sprite | undefined;
+  if (!trail) {
+    trail = scene.add.sprite(0, 0, trailKey);
+    trail.setOrigin(1, 0.5);
+    trail.setBlendMode(Phaser.BlendModes.ADD);
+    trail.setDepth(8);
+    bullet.setData("trail", trail);
+  }
+  if (!glow) {
+    glow = scene.add.sprite(0, 0, "bullet_glow");
+    glow.setOrigin(0.5, 0.5);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    glow.setDepth(8);
+    glow.setScale(1.6);
+    bullet.setData("glow", glow);
+  }
+  return { trail, glow };
+}
+
+function showTrail(
+  bullet: Phaser.Physics.Arcade.Sprite,
+  angle: number,
+  tint: number
+): void {
+  const trail = bullet.getData("trail") as Phaser.GameObjects.Sprite;
+  const glow = bullet.getData("glow") as Phaser.GameObjects.Sprite;
+  if (trail) {
+    trail.setPosition(bullet.x, bullet.y);
+    trail.setRotation(angle);
+    trail.setVisible(true);
+  }
+  if (glow) {
+    glow.setPosition(bullet.x, bullet.y);
+    glow.setTint(tint);
+    glow.setVisible(true);
+  }
+}
+
+function hideTrail(bullet: Phaser.Physics.Arcade.Sprite): void {
+  const trail = bullet.getData("trail") as Phaser.GameObjects.Sprite | undefined;
+  const glow = bullet.getData("glow") as Phaser.GameObjects.Sprite | undefined;
+  if (trail) trail.setVisible(false);
+  if (glow) glow.setVisible(false);
+}
+
+export function updateBulletTrails(
+  group: Phaser.Physics.Arcade.Group,
+  tint: number
+): void {
+  group.getChildren().forEach((c) => {
+    const b = c as Phaser.Physics.Arcade.Sprite;
+    if (!b.active) {
+      hideTrail(b);
+      return;
+    }
+    showTrail(b, b.rotation, tint);
+  });
+}
+
 export class Pistol {
   scene: Phaser.Scene;
   bullets: Phaser.Physics.Arcade.Group;
@@ -37,6 +108,9 @@ export class Pistol {
     const sp = SideScrollerConfig.pistol.bulletSpeed;
     body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
 
+    ensureTrail(this.scene, b, "bullet_trail_player");
+    showTrail(b, angle, 0xffe066);
+
     this.scene.time.delayedCall(SideScrollerConfig.pistol.bulletLifeMs, () => {
       if (!b.active) return;
       this.recycle(b);
@@ -48,9 +122,14 @@ export class Pistol {
 
   recycle(b: Phaser.Physics.Arcade.Sprite): void {
     b.setActive(false).setVisible(false);
+    hideTrail(b);
     const body = b.body as Phaser.Physics.Arcade.Body;
     body.reset(-9999, -9999);
     body.setVelocity(0, 0);
+  }
+
+  update(): void {
+    updateBulletTrails(this.bullets, 0xffe066);
   }
 }
 
@@ -78,6 +157,8 @@ export class GuardGun {
     b.rotation = angle;
     const sp = SideScrollerConfig.guard.bulletSpeed;
     body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
+    ensureTrail(this.scene, b, "bullet_trail_guard");
+    showTrail(b, angle, 0xff8030);
     this.scene.time.delayedCall(SideScrollerConfig.guard.bulletLifeMs, () => {
       if (!b.active) return;
       this.recycle(b);
@@ -87,8 +168,13 @@ export class GuardGun {
 
   recycle(b: Phaser.Physics.Arcade.Sprite): void {
     b.setActive(false).setVisible(false);
+    hideTrail(b);
     const body = b.body as Phaser.Physics.Arcade.Body;
     body.reset(-9999, -9999);
     body.setVelocity(0, 0);
+  }
+
+  update(): void {
+    updateBulletTrails(this.bullets, 0xff8030);
   }
 }

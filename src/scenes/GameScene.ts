@@ -230,6 +230,10 @@ export class GameScene extends Phaser.Scene {
       g.think(time, delta, this.player.x, this.player.y, worldFactor);
     });
 
+    // Bullet trail visuals follow each active projectile
+    this.pistol.update();
+    this.guardGun.update();
+
     this.combo.update(time);
     this.hud.update(
       this.player.hp,

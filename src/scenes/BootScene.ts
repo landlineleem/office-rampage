@@ -77,6 +77,11 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("particle_smoke", 24, 24, (g) => this.drawParticleSmoke(g));
     this.makeTexture("particle_debris", 6, 6, (g) => this.drawParticleDebris(g));
 
+    // Bullet trail glows (stretched gradient bars, ADD-blended)
+    this.makeTexture("bullet_trail_player", 60, 8, (g) => this.drawBulletTrail(g, 60, 8, 0xffe066));
+    this.makeTexture("bullet_trail_guard", 48, 6, (g) => this.drawBulletTrail(g, 48, 6, 0xffa040));
+    this.makeTexture("bullet_glow", 16, 16, (g) => this.drawBulletGlow(g));
+
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
     this.makeTexture("desk", 200, 96, (g) => this.drawReceptionDesk(g));
@@ -421,6 +426,31 @@ export class BootScene extends Phaser.Scene {
     // Small chunky square — will be tinted dark at emit time.
     g.fillStyle(0xffffff, 1);
     g.fillRect(0, 0, 6, 6);
+  }
+
+  private drawBulletTrail(
+    g: Phaser.GameObjects.Graphics,
+    w: number,
+    h: number,
+    color: number
+  ): void {
+    // Horizontal gradient — fully transparent on left, opaque on right.
+    // Sprite uses origin (1, 0.5) so the bright end is at the bullet and
+    // the trail fades off behind.
+    for (let x = 0; x < w; x++) {
+      const t = x / (w - 1);
+      const alpha = Math.pow(t, 1.6) * 0.85;
+      g.fillStyle(color, alpha);
+      g.fillRect(x, 0, 1, h);
+    }
+  }
+
+  private drawBulletGlow(g: Phaser.GameObjects.Graphics): void {
+    // Soft 16x16 radial glow — drawn behind each bullet via ADD blend.
+    for (let r = 8; r >= 1; r--) {
+      g.fillStyle(0xffffff, (1 - r / 8) * 0.4);
+      g.fillCircle(8, 8, r);
+    }
   }
 
   // ---------- Props ----------
