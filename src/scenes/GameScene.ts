@@ -6,7 +6,17 @@ import {
   SINGLE_STAPLER,
   AUTO_STAPLER,
 } from "../modes/office-sidescroller/weapons";
-import { SecurityGuard } from "../modes/office-sidescroller/enemies";
+import {
+  Enemy,
+  SecurityGuard,
+  SECURITY_GUARD,
+  HEAVY_GUARD,
+  SNIPER,
+  INTERN,
+  CEO_BOSS,
+  type EnemyConfig,
+} from "../modes/office-sidescroller/enemies";
+import type { EnemyKind } from "../modes/office-sidescroller/lobby-level";
 import { Corpse } from "../modes/office-sidescroller/Corpse";
 import { WeaponPickup } from "../modes/office-sidescroller/Pickup";
 import type { LevelData } from "../modes/office-sidescroller/lobby-level";
@@ -39,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     triggerX: number;
     sprite: Phaser.GameObjects.Image;
     triggered: boolean;
+    kind: EnemyKind;
   }> = [];
   private vignette!: Phaser.GameObjects.Image;
   private slowMoTint!: Phaser.GameObjects.Rectangle;
@@ -121,11 +132,9 @@ export class GameScene extends Phaser.Scene {
     this.corpses = this.physics.add.group({ classType: Corpse, runChildUpdate: false });
     this.pickups = this.physics.add.group({ classType: WeaponPickup, runChildUpdate: true });
     for (const e of lvl.enemies) {
-      if (e.type === "guard") {
-        // Spawn slightly above ground so gravity drops them onto it.
-        const guard = new SecurityGuard(this, e.x, lvl.groundY - 4, this.guardGun);
-        this.guards.add(guard);
-      }
+      const spawnY = e.y ?? lvl.groundY - 4;
+      const guard = this.spawnEnemyByKind(e.kind, e.x, spawnY);
+      if (guard) this.guards.add(guard);
     }
 
     // Door spawners — render closed doors at each position
@@ -134,12 +143,13 @@ export class GameScene extends Phaser.Scene {
       const doorSprite = this.add
         .image(spawner.x, lvl.groundY, "office_door")
         .setOrigin(0.5, 1)
-        .setDepth(4); // behind player but in front of wall
+        .setDepth(4);
       this.doorSpawners.push({
         x: spawner.x,
         triggerX: spawner.triggerX,
         sprite: doorSprite,
         triggered: false,
+        kind: spawner.kind ?? "guard",
       });
     }
 
@@ -174,13 +184,15 @@ export class GameScene extends Phaser.Scene {
       this.onPickup(p);
     });
 
-    // Guard bullets → player (scaled bullet damage)
+    // Guard bullets → player. Per-bullet damage payload set at fire time.
     this.physics.add.overlap(this.player, this.guardGun.bullets, (_pl, bullet) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       const hx = b.x;
       const hy = b.y;
+      const dmg = (b.getData("damage") as number | undefined)
+        ?? SideScrollerConfig.player.guardBulletDamage;
       this.guardGun.recycle(b);
-      if (this.player.takeDamage(this.time.now, SideScrollerConfig.player.guardBulletDamage)) {
+      if (this.player.takeDamage(this.time.now, dmg)) {
         sound.playerHurt();
         this.particles.playerHit(hx, hy);
         this.fx.playerHurt();
@@ -189,13 +201,13 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Enemy contact damage (scaled contact damage)
+    // Enemy contact damage (scaled contact damage per enemy type)
     this.physics.add.overlap(this.player, this.guards, (_pl, enemy) => {
-      const e = enemy as SecurityGuard;
+      const e = enemy as Enemy;
       const now = this.time.now;
-      if (now - e.lastContact < SideScrollerConfig.guard.contactCooldownMs) return;
+      if (now - e.lastContact < e.config.contactCooldownMs) return;
       e.lastContact = now;
-      if (this.player.takeDamage(now, SideScrollerConfig.player.guardContactDamage)) {
+      if (this.player.takeDamage(now, e.config.contactDamage)) {
         sound.playerHurt();
         this.fx.playerHurt();
         this.combo.break();
@@ -283,16 +295,17 @@ export class GameScene extends Phaser.Scene {
     // Bullets that hit a guard apply damage / spawn the kill effects
     this.physics.add.overlap(weapon.bullets, this.guards, (bullet, enemy) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
-      const e = enemy as SecurityGuard;
+      const e = enemy as Enemy;
       const hx = b.x;
       const hy = b.y;
       const bulletBody = b.body as Phaser.Physics.Arcade.Body;
       const hitDir = bulletBody.velocity.x >= 0 ? 1 : -1;
+      const dmg = (b.getData("damage") as number | undefined) ?? 1;
       weapon.recycle(b);
       sound.hit();
       this.particles.impactSparks(hx, hy, 6);
       this.particles.playerHit(hx, hy);
-      if (e.damage()) {
+      if (e.damage(dmg)) {
         const dx = e.x;
         const dy = e.y;
         const eFacingRight = e.facingRight;
@@ -301,8 +314,12 @@ export class GameScene extends Phaser.Scene {
         this.particles.guardDeath(dx, dy - 60);
         this.fx.guardKill();
         const corpse = new Corpse(this, dx, dy, "guard_idle", hitDir, eFacingRight);
+        // Inherit the enemy's tint + scale so the corpse looks like the
+        // archetype that died.
+        corpse.setTint(e.config.tint);
+        corpse.setScale(e.config.scale);
         this.corpses.add(corpse);
-        this.combo.registerKill(this.time.now);
+        this.combo.registerKill(this.time.now, e.config.scoreValue);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
           this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
@@ -333,6 +350,7 @@ export class GameScene extends Phaser.Scene {
     x: number;
     sprite: Phaser.GameObjects.Image;
     triggered: boolean;
+    kind: EnemyKind;
   }): void {
     const groundY = this.level.groundY;
     // Open the door (slide aside + fade)
@@ -345,17 +363,30 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => ds.sprite.setVisible(false),
     });
     sound.elevatorDing();
-    // Spawn a guard inside the doorway then have them "step out"
-    const guard = new SecurityGuard(this, ds.x, groundY - 4, this.guardGun);
-    guard.setAlpha(0);
-    this.guards.add(guard);
-    this.tweens.add({
-      targets: guard,
-      alpha: 1,
-      duration: 250,
-    });
-    // Small puff of dust at the door
+    const enemy = this.spawnEnemyByKind(ds.kind, ds.x, groundY - 4);
+    if (enemy) {
+      enemy.setAlpha(0);
+      this.guards.add(enemy);
+      this.tweens.add({
+        targets: enemy,
+        alpha: 1,
+        duration: 250,
+      });
+    }
     this.particles.smokePuff(ds.x, groundY - 30, 2);
+  }
+
+  private spawnEnemyByKind(kind: EnemyKind, x: number, y: number): Enemy | null {
+    let config: EnemyConfig;
+    switch (kind) {
+      case "guard": config = SECURITY_GUARD; break;
+      case "heavy": config = HEAVY_GUARD; break;
+      case "sniper": config = SNIPER; break;
+      case "intern": config = INTERN; break;
+      case "ceo": config = CEO_BOSS; break;
+      default: return null;
+    }
+    return new Enemy(this, x, y, this.guardGun, config);
   }
 
   private onPickup(p: WeaponPickup): void {

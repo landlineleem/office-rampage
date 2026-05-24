@@ -1,8 +1,6 @@
 export type Platform = { x: number; y: number; width: number; height: number };
 
 export type LowObstacle = {
-  // The obstacle hangs in the air with a gap below it. Standing body collides
-  // with it; slide body is short enough to pass underneath. Slide to advance.
   x: number;
   y: number;
   width: number;
@@ -10,16 +8,31 @@ export type LowObstacle = {
   textureKey: string;
 };
 
-export type EnemySpawn = { type: "guard"; x: number };
+export type EnemyKind = "guard" | "heavy" | "sniper" | "intern" | "ceo";
+
+export type EnemySpawn = { kind: EnemyKind; x: number; y?: number };
 
 // A wall door that opens and spits out a guard when the player crosses
 // `triggerX`. One-shot.
 export type DoorSpawner = {
   x: number;
   triggerX: number;
+  kind?: EnemyKind; // defaults to "guard"
 };
 
-export type LevelTheme = "lobby" | "cubicles";
+export type LevelTheme =
+  | "lobby"
+  | "cubicles"
+  | "boardroom"
+  | "break_room"
+  | "server_room"
+  | "hallway"
+  | "penthouse";
+
+export type PickupSpawn = {
+  // Drops automatically at the location after the last guard dies
+  kind: "auto_stapler" | "hole_punch" | "swingline";
+};
 
 export type LevelData = {
   name: string;
@@ -30,12 +43,13 @@ export type LevelData = {
   playerStart: { x: number; y: number };
   exteriorEndX: number;
   elevator: { x: number; y: number };
-  // p.y = TOP (walkable surface) of the platform, p.y + p.height = bottom.
   platforms: Platform[];
-  // o.y = TOP of the obstacle, o.y + o.height = bottom.
   lowObstacles: LowObstacle[];
   enemies: EnemySpawn[];
   doorSpawners: DoorSpawner[];
+  // Optional pickup that drops when the floor is cleared (all guards dead +
+  // all doors triggered). Awards the player a new weapon for the next floor.
+  rewardPickup?: PickupSpawn;
 };
 
 export const lobbyLevel: LevelData = {
@@ -54,17 +68,16 @@ export const lobbyLevel: LevelData = {
   lowObstacles: [
     { x: 2750, y: 414, width: 160, height: 66, textureKey: "low_obstacle" },
   ],
-  // Guards visible at the start
   enemies: [
-    { type: "guard", x: 1180 },
-    { type: "guard", x: 1900 },
-    { type: "guard", x: 3100 },
+    { kind: "guard", x: 1180 },
+    { kind: "guard", x: 1900 },
+    { kind: "guard", x: 3100 },
   ],
-  // Doors that open as the player advances. Each spawns one guard.
   doorSpawners: [
     { x: 1300, triggerX: 1100 },
     { x: 2000, triggerX: 1750 },
     { x: 2600, triggerX: 2400 },
     { x: 3250, triggerX: 3050 },
   ],
+  rewardPickup: { kind: "auto_stapler" },
 };

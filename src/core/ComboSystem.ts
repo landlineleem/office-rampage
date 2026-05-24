@@ -17,7 +17,7 @@ export class ComboSystem {
   lastKillAt = -Infinity;
   onMilestone?: ComboMilestoneCallback;
 
-  registerKill(now: number): void {
+  registerKill(now: number, baseScore = 100): void {
     this.totalKills += 1;
     if (now - this.lastKillAt <= SideScrollerConfig.combo.windowMs) {
       this.count += 1;
@@ -26,7 +26,9 @@ export class ComboSystem {
     }
     this.lastKillAt = now;
     if (this.count > this.best) this.best = this.count;
-    this.score += this.count * 10;
+    // Score = enemy base * current combo. Tougher enemies + bigger combos
+    // compound for big numbers.
+    this.score += baseScore * this.count;
     const milestone = MILESTONES[this.count];
     if (milestone) this.onMilestone?.(this.count, milestone);
   }

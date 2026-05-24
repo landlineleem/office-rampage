@@ -17,19 +17,27 @@ export interface WeaponConfig {
   spread: number; // radians of inaccuracy each shot
   shotStrength: number; // sound volume multiplier
   bulletTextureKey: string;
+  bulletDamage: number;
+  pelletsPerShot: number; // shotgun = >1
+  pelletSpread: number; // radian cone for shotgun pellets
+  bulletTint: number;
 }
 
 export const SINGLE_STAPLER: WeaponConfig = {
   name: "STAPLER",
   shortName: "STAPLER",
   fireMode: "semi",
-  fireRateMs: 140, // min spacing between trigger pulls
+  fireRateMs: 140,
   bulletSpeed: 1000,
   bulletLifeMs: 1100,
   spawnOffset: 26,
   spread: 0,
   shotStrength: 1.0,
   bulletTextureKey: "staple",
+  bulletDamage: 1,
+  pelletsPerShot: 1,
+  pelletSpread: 0,
+  bulletTint: 0xffffff,
 };
 
 export const AUTO_STAPLER: WeaponConfig = {
@@ -40,9 +48,47 @@ export const AUTO_STAPLER: WeaponConfig = {
   bulletSpeed: 1100,
   bulletLifeMs: 850,
   spawnOffset: 26,
-  spread: 0.08, // slight inaccuracy
+  spread: 0.08,
   shotStrength: 0.7,
   bulletTextureKey: "staple",
+  bulletDamage: 1,
+  pelletsPerShot: 1,
+  pelletSpread: 0,
+  bulletTint: 0xffffff,
+};
+
+export const HOLE_PUNCH: WeaponConfig = {
+  name: "HOLE PUNCH",
+  shortName: "PUNCH",
+  fireMode: "semi",
+  fireRateMs: 500,
+  bulletSpeed: 850,
+  bulletLifeMs: 500, // short — close-range weapon
+  spawnOffset: 28,
+  spread: 0,
+  shotStrength: 1.4,
+  bulletTextureKey: "staple",
+  bulletDamage: 2,
+  pelletsPerShot: 5,
+  pelletSpread: 0.42,
+  bulletTint: 0xff8030, // orange-tinted hole-punch bits
+};
+
+export const RED_SWINGLINE: WeaponConfig = {
+  name: "RED SWINGLINE",
+  shortName: "SNIPER",
+  fireMode: "semi",
+  fireRateMs: 800,
+  bulletSpeed: 1800,
+  bulletLifeMs: 1800,
+  spawnOffset: 28,
+  spread: 0,
+  shotStrength: 1.6,
+  bulletTextureKey: "staple",
+  bulletDamage: 8, // one-shot everything except heavies + boss
+  pelletsPerShot: 1,
+  pelletSpread: 0,
+  bulletTint: 0xc73a3a, // red — premium stapler
 };
 
 // ---------- Bullet trail helpers (unchanged) ----------
@@ -133,36 +179,48 @@ export class PlayerWeapon {
     if (now - this.lastFire < this.config.fireRateMs) return false;
     this.lastFire = now;
 
-    const spread = this.config.spread;
-    const angle = spread > 0 ? baseAngle + (Math.random() - 0.5) * spread * 2 : baseAngle;
-
     const off = this.config.spawnOffset;
-    const sx = shoulderX + Math.cos(angle) * off;
-    const sy = shoulderY + Math.sin(angle) * off;
+    const baseSpawnX = shoulderX + Math.cos(baseAngle) * off;
+    const baseSpawnY = shoulderY + Math.sin(baseAngle) * off;
 
-    const b = this.bullets.get(sx, sy) as Phaser.Physics.Arcade.Sprite | null;
-    if (!b) return false;
+    const pellets = this.config.pelletsPerShot;
+    const pelletSpread = this.config.pelletSpread;
+    let anyFired = false;
+    for (let i = 0; i < pellets; i++) {
+      // Per-pellet angle: shotgun spread evenly + base spread randomness
+      let angle = baseAngle;
+      if (pellets > 1) {
+        const t = pellets === 1 ? 0 : (i / (pellets - 1)) * 2 - 1; // -1..1
+        angle += t * (pelletSpread / 2);
+      }
+      if (this.config.spread > 0) {
+        angle += (Math.random() - 0.5) * this.config.spread * 2;
+      }
+      const b = this.bullets.get(baseSpawnX, baseSpawnY) as
+        | Phaser.Physics.Arcade.Sprite
+        | null;
+      if (!b) continue;
+      anyFired = true;
+      b.setActive(true).setVisible(true);
+      const body = b.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false);
+      body.reset(baseSpawnX, baseSpawnY);
+      body.setSize(10, 6).setOffset(3, 2);
+      b.rotation = angle;
+      const sp = this.config.bulletSpeed;
+      body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
+      b.setTint(this.config.bulletTint);
+      b.setData("damage", this.config.bulletDamage);
+      ensureTrail(this.scene, b, "bullet_trail_player");
+      showTrail(b, angle, this.config.bulletTint === 0xffffff ? 0xffe066 : this.config.bulletTint);
+      this.scene.time.delayedCall(this.config.bulletLifeMs, () => {
+        if (!b.active) return;
+        this.recycle(b);
+      });
+    }
 
-    b.setActive(true).setVisible(true);
-    const body = b.body as Phaser.Physics.Arcade.Body;
-    body.setAllowGravity(false);
-    body.reset(sx, sy);
-    body.setSize(10, 6).setOffset(3, 2);
-    b.rotation = angle;
-
-    const sp = this.config.bulletSpeed;
-    body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
-
-    ensureTrail(this.scene, b, "bullet_trail_player");
-    showTrail(b, angle, 0xffe066);
-
-    this.scene.time.delayedCall(this.config.bulletLifeMs, () => {
-      if (!b.active) return;
-      this.recycle(b);
-    });
-
-    sound.gunshot(this.config.shotStrength);
-    return true;
+    if (anyFired) sound.gunshot(this.config.shotStrength);
+    return anyFired;
   }
 
   recycle(b: Phaser.Physics.Arcade.Sprite): void {
@@ -193,7 +251,14 @@ export class GuardGun {
     });
   }
 
-  fire(sx: number, sy: number, angle: number): void {
+  fire(
+    sx: number,
+    sy: number,
+    angle: number,
+    overrideSpeed?: number,
+    overrideLifeMs?: number,
+    damage?: number
+  ): void {
     const b = this.bullets.get(sx, sy) as Phaser.Physics.Arcade.Sprite | null;
     if (!b) return;
     b.setActive(true).setVisible(true);
@@ -202,11 +267,13 @@ export class GuardGun {
     body.reset(sx, sy);
     body.setSize(6, 3).setOffset(1, 0.5);
     b.rotation = angle;
-    const sp = SideScrollerConfig.guard.bulletSpeed;
+    const sp = overrideSpeed ?? SideScrollerConfig.guard.bulletSpeed;
     body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
     ensureTrail(this.scene, b, "bullet_trail_guard");
     showTrail(b, angle, 0xff8030);
-    this.scene.time.delayedCall(SideScrollerConfig.guard.bulletLifeMs, () => {
+    b.setData("damage", damage ?? SideScrollerConfig.player.guardBulletDamage);
+    const life = overrideLifeMs ?? SideScrollerConfig.guard.bulletLifeMs;
+    this.scene.time.delayedCall(life, () => {
       if (!b.active) return;
       this.recycle(b);
     });
