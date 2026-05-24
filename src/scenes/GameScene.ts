@@ -327,7 +327,12 @@ export class GameScene extends Phaser.Scene {
     const mx = this.player.shoulderX + Math.cos(this.player.aimAngle) * off;
     const my = this.player.shoulderY + Math.sin(this.player.aimAngle) * off;
     this.particles.muzzleFlash(mx, my, this.player.aimAngle);
-    this.particles.smokePuff(mx, my, 1);
+    // Smoke puff per shot is overwhelming for full-auto — only puff
+    // every 4th shot for auto weapons, every shot for semi.
+    const wantSmoke =
+      weapon.config.fireMode === "semi" ||
+      Math.floor(time / weapon.config.fireRateMs) % 4 === 0;
+    if (wantSmoke) this.particles.smokePuff(mx, my, 1);
   }
 
   private registerWeaponColliders(weapon: PlayerWeapon): void {
