@@ -529,9 +529,30 @@ export class GameScene extends Phaser.Scene {
       const max = SideScrollerConfig.player.maxHP;
       const before = this.player.hp;
       this.player.hp = Math.min(max, before + 30);
+      const healed = this.player.hp - before;
       sound.uiClick();
       this.fx.flash(0x6abd5a, 200, 0.16);
-      this.spawnScorePopup(p.x, p.y - 20, this.player.hp - before);
+      if (healed > 0) {
+        // Reuse the score-popup helper, custom green text
+        const text = this.add
+          .text(p.x, p.y - 20, `+${healed} HP`, {
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "16px",
+            color: "#6abd5a",
+            stroke: "#1a1d24",
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(800);
+        this.tweens.add({
+          targets: text,
+          y: p.y - 80,
+          alpha: 0,
+          duration: 900,
+          ease: "Cubic.easeOut",
+          onComplete: () => text.destroy(),
+        });
+      }
       p.destroy();
       return;
     }
