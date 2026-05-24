@@ -590,8 +590,11 @@ export class GameScene extends Phaser.Scene {
     const decal = this.add
       .image(x, y, "bullet_hole")
       .setRotation(angle)
-      .setDepth(2) // behind player + props but in front of wall
-      .setAlpha(0.85);
+      .setDepth(2)
+      .setAlpha(0.6); // toned down from 0.85 — was too prominent on light walls
+    // Slight random scale variance so they don't all look identical
+    const s = 0.85 + Math.random() * 0.3;
+    decal.setScale(s);
     this.decals.push(decal);
     if (this.decals.length > this.MAX_DECALS) {
       const oldest = this.decals.shift();
