@@ -1,4 +1,4 @@
-import { OfficeConfig } from "../modes/office/config";
+import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 
 export class ComboSystem {
   count = 0;
@@ -9,7 +9,7 @@ export class ComboSystem {
 
   registerKill(now: number): void {
     this.totalKills += 1;
-    if (now - this.lastKillAt <= OfficeConfig.combo.windowMs) {
+    if (now - this.lastKillAt <= SideScrollerConfig.combo.windowMs) {
       this.count += 1;
     } else {
       this.count = 1;
@@ -20,7 +20,7 @@ export class ComboSystem {
   }
 
   update(now: number): void {
-    if (this.count > 0 && now - this.lastKillAt > OfficeConfig.combo.windowMs) {
+    if (this.count > 0 && now - this.lastKillAt > SideScrollerConfig.combo.windowMs) {
       this.count = 0;
     }
   }

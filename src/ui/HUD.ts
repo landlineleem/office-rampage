@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { OfficeConfig } from "../modes/office/config";
+import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 
 const FONT = "ui-monospace, monospace";
 
@@ -9,7 +9,7 @@ export class HUD {
   caffeineBar: Phaser.GameObjects.Rectangle;
   caffeineLabel: Phaser.GameObjects.Text;
   comboText: Phaser.GameObjects.Text;
-  waveText: Phaser.GameObjects.Text;
+  floorText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
@@ -22,7 +22,11 @@ export class HUD {
       .setDepth(z);
 
     this.caffeineLabel = scene.add
-      .text(16, 44, "CAFFEINE", { fontFamily: FONT, fontSize: "11px", color: "#aaa" })
+      .text(16, 44, "CAFFEINE  ·  hold E", {
+        fontFamily: FONT,
+        fontSize: "11px",
+        color: "#aaa",
+      })
       .setScrollFactor(0)
       .setDepth(z);
 
@@ -43,7 +47,7 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(z);
 
-    this.waveText = scene.add
+    this.floorText = scene.add
       .text(w - 16, 12, "", { fontFamily: FONT, fontSize: "22px", color: "#ffffff" })
       .setOrigin(1, 0)
       .setScrollFactor(0)
@@ -60,19 +64,19 @@ export class HUD {
     hp: number,
     caffeineMs: number,
     combo: number,
-    wave: number,
+    floor: number,
     score: number,
     inWithdrawal: boolean
   ): void {
-    const max = OfficeConfig.player.maxHP;
+    const max = SideScrollerConfig.player.maxHP;
     this.hpText.setText(
       "♥".repeat(Math.max(0, hp)) + "♡".repeat(Math.max(0, max - hp))
     );
-    const pct = Phaser.Math.Clamp(caffeineMs / OfficeConfig.caffeine.maxMs, 0, 1);
+    const pct = Phaser.Math.Clamp(caffeineMs / SideScrollerConfig.caffeine.maxMs, 0, 1);
     this.caffeineBar.width = 220 * pct;
     this.caffeineBar.fillColor = inWithdrawal ? 0x555555 : 0xa66635;
     this.comboText.setText(combo > 1 ? `x${combo} COMBO` : "");
-    this.waveText.setText(`WAVE ${wave}`);
+    this.floorText.setText(`FLOOR ${floor}`);
     this.scoreText.setText(`SCORE ${score}`);
   }
 }

@@ -3,6 +3,7 @@ import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
 import { GameOverScene } from "./scenes/GameOverScene";
+import { LevelClearedScene } from "./scenes/LevelClearedScene";
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -11,8 +12,8 @@ new Phaser.Game({
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 960,
-    height: 640,
+    width: 1280,
+    height: 720,
   },
   physics: {
     default: "arcade",
@@ -21,5 +22,5 @@ new Phaser.Game({
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, GameOverScene],
+  scene: [BootScene, MenuScene, GameScene, GameOverScene, LevelClearedScene],
 });
