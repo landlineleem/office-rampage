@@ -1,8 +1,14 @@
 import Phaser from "phaser";
 import { SideScrollerPlayer, type PlayerKeys } from "../core/SideScrollerPlayer";
-import { Pistol, GuardGun } from "../modes/office-sidescroller/weapons";
+import {
+  PlayerWeapon,
+  GuardGun,
+  SINGLE_STAPLER,
+  AUTO_STAPLER,
+} from "../modes/office-sidescroller/weapons";
 import { SecurityGuard } from "../modes/office-sidescroller/enemies";
 import { Corpse } from "../modes/office-sidescroller/Corpse";
+import { WeaponPickup } from "../modes/office-sidescroller/Pickup";
 import type { LevelData } from "../modes/office-sidescroller/lobby-level";
 import { getLevel, hasNextLevel } from "../modes/office-sidescroller/levels";
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
@@ -14,7 +20,9 @@ import { HitFx } from "../core/HitFx";
 
 export class GameScene extends Phaser.Scene {
   private player!: SideScrollerPlayer;
-  private pistol!: Pistol;
+  private weapons: PlayerWeapon[] = [];
+  private currentWeapon = 0;
+  private hasAutoStapler = false;
   private guardGun!: GuardGun;
   private guards!: Phaser.Physics.Arcade.Group;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
@@ -25,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private particles!: Particles;
   private fx!: HitFx;
   private corpses!: Phaser.Physics.Arcade.Group;
+  private pickups!: Phaser.Physics.Arcade.Group;
   private vignette!: Phaser.GameObjects.Image;
   private slowMoTint!: Phaser.GameObjects.Rectangle;
   private crosshair!: Phaser.GameObjects.Image;
@@ -48,11 +57,13 @@ export class GameScene extends Phaser.Scene {
     score?: number;
     kills?: number;
     bestCombo?: number;
+    hasAutoStapler?: boolean;
   }): void {
     this.levelIndex = data.levelIndex ?? 0;
     this.inheritedScore = data.score ?? 0;
     this.inheritedKills = data.kills ?? 0;
     this.inheritedBestCombo = data.bestCombo ?? 0;
+    this.hasAutoStapler = data.hasAutoStapler ?? false;
   }
 
   create(): void {
@@ -90,11 +101,19 @@ export class GameScene extends Phaser.Scene {
     this.particles = new Particles(this);
     this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
-    this.pistol = new Pistol(this);
+
+    // Weapons: single stapler is the default starter; auto stapler unlocks
+    // after picking up the drop from the last guard on Floor 1.
+    this.weapons = [new PlayerWeapon(this, SINGLE_STAPLER)];
+    if (this.hasAutoStapler) {
+      this.weapons.push(new PlayerWeapon(this, AUTO_STAPLER));
+    }
+    this.currentWeapon = 0;
     this.guardGun = new GuardGun(this);
 
     this.guards = this.physics.add.group({ classType: SecurityGuard, runChildUpdate: false });
     this.corpses = this.physics.add.group({ classType: Corpse, runChildUpdate: false });
+    this.pickups = this.physics.add.group({ classType: WeaponPickup, runChildUpdate: true });
     for (const e of lvl.enemies) {
       if (e.type === "guard") {
         // Spawn slightly above ground so gravity drops them onto it.
@@ -107,6 +126,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.platforms);
     this.physics.add.collider(this.guards, this.platforms);
     this.physics.add.collider(this.corpses, this.platforms);
+    this.physics.add.collider(this.pickups, this.platforms);
     // Low obstacles ONLY collide with the player when they're NOT sliding
     this.physics.add.collider(
       this.player,
@@ -119,45 +139,18 @@ export class GameScene extends Phaser.Scene {
       this
     );
     this.physics.add.collider(this.guards, this.lowObstacles);
-    this.physics.add.collider(this.pistol.bullets, this.platforms, (bullet) => {
-      this.pistol.recycle(bullet as Phaser.Physics.Arcade.Sprite);
-    });
+    // Register colliders for every player weapon (the array may grow at
+    // runtime via pickups, so we'll re-register when a new weapon is
+    // added — see registerWeaponColliders).
+    for (const weapon of this.weapons) this.registerWeaponColliders(weapon);
     this.physics.add.collider(this.guardGun.bullets, this.platforms, (bullet) => {
       this.guardGun.recycle(bullet as Phaser.Physics.Arcade.Sprite);
     });
 
-    // Bullet → enemy
-    this.physics.add.overlap(this.pistol.bullets, this.guards, (bullet, enemy) => {
-      const b = bullet as Phaser.Physics.Arcade.Sprite;
-      const e = enemy as SecurityGuard;
-      const hx = b.x;
-      const hy = b.y;
-      // Capture bullet travel direction before recycling resets velocity.
-      const bulletBody = b.body as Phaser.Physics.Arcade.Body;
-      const hitDir = bulletBody.velocity.x >= 0 ? 1 : -1;
-      this.pistol.recycle(b);
-      sound.hit();
-      this.particles.impactSparks(hx, hy, 6);
-      this.particles.playerHit(hx, hy);
-      if (e.damage()) {
-        const dx = e.x;
-        const dy = e.y;
-        const eFacingRight = e.facingRight;
-        e.destroy();
-        sound.death();
-        this.particles.guardDeath(dx, dy - 60);
-        this.fx.guardKill();
-        // Spawn ragdoll corpse
-        const corpse = new Corpse(this, dx, dy, "guard_idle", hitDir, eFacingRight);
-        this.corpses.add(corpse);
-        this.combo.registerKill(this.time.now);
-        this.caffeineMs = Math.min(
-          SideScrollerConfig.caffeine.maxMs,
-          this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
-        );
-      } else {
-        this.fx.guardHit();
-      }
+    // Pickup → player
+    this.physics.add.overlap(this.player, this.pickups, (_pl, pickup) => {
+      const p = pickup as WeaponPickup;
+      this.onPickup(p);
     });
 
     // Guard bullets → player
@@ -189,7 +182,8 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Elevator trigger — runs the transition animation, then advances
+    // Elevator trigger — only opens once the floor is actually cleared
+    // (all guards dead AND the player picked up any guaranteed drop).
     this.physics.add.overlap(this.player, this.elevator, () => {
       if (this.cleared) return;
       this.cleared = true;
@@ -225,9 +219,83 @@ export class GameScene extends Phaser.Scene {
 
     this.keys = this.input.keyboard!.addKeys("W,A,S,D,SPACE") as PlayerKeys;
     this.input.mouse?.disableContextMenu();
+    // Weapon hotswap keys 1 / 2
+    this.input.keyboard?.on("keydown-ONE", () => this.selectWeapon(0));
+    this.input.keyboard?.on("keydown-TWO", () => this.selectWeapon(1));
 
     // Floor intro banner
     this.hud.showBanner(`FLOOR ${this.levelIndex + 1} · ${this.level.name.toUpperCase()}`, 1600);
+  }
+
+  private registerWeaponColliders(weapon: PlayerWeapon): void {
+    // Bullets that hit a platform are recycled
+    this.physics.add.collider(weapon.bullets, this.platforms, (bullet) => {
+      weapon.recycle(bullet as Phaser.Physics.Arcade.Sprite);
+    });
+    // Bullets that hit a guard apply damage / spawn the kill effects
+    this.physics.add.overlap(weapon.bullets, this.guards, (bullet, enemy) => {
+      const b = bullet as Phaser.Physics.Arcade.Sprite;
+      const e = enemy as SecurityGuard;
+      const hx = b.x;
+      const hy = b.y;
+      const bulletBody = b.body as Phaser.Physics.Arcade.Body;
+      const hitDir = bulletBody.velocity.x >= 0 ? 1 : -1;
+      weapon.recycle(b);
+      sound.hit();
+      this.particles.impactSparks(hx, hy, 6);
+      this.particles.playerHit(hx, hy);
+      if (e.damage()) {
+        const dx = e.x;
+        const dy = e.y;
+        const eFacingRight = e.facingRight;
+        e.destroy();
+        sound.death();
+        this.particles.guardDeath(dx, dy - 60);
+        this.fx.guardKill();
+        const corpse = new Corpse(this, dx, dy, "guard_idle", hitDir, eFacingRight);
+        this.corpses.add(corpse);
+        this.combo.registerKill(this.time.now);
+        this.caffeineMs = Math.min(
+          SideScrollerConfig.caffeine.maxMs,
+          this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
+        );
+        this.maybeDropAutoStaplerPickup(dx, dy);
+      } else {
+        this.fx.guardHit();
+      }
+    });
+  }
+
+  private maybeDropAutoStaplerPickup(x: number, y: number): void {
+    // Only on Floor 1, only if the player doesn't already have it,
+    // only when this kill emptied the guard roster.
+    if (this.levelIndex !== 0) return;
+    if (this.hasAutoStapler) return;
+    if (this.guards.countActive(true) > 0) return;
+    const pickup = new WeaponPickup(this, x, y - 60, "auto_stapler");
+    this.pickups.add(pickup);
+    this.hud.showBanner("WEAPON DROPPED", 1500);
+  }
+
+  private onPickup(p: WeaponPickup): void {
+    if (p.kind === "auto_stapler") {
+      this.hasAutoStapler = true;
+      const auto = new PlayerWeapon(this, AUTO_STAPLER);
+      this.weapons.push(auto);
+      this.registerWeaponColliders(auto);
+      this.selectWeapon(this.weapons.length - 1);
+      this.hud.showBanner("AUTO STAPLER · press 1 / 2 to swap", 2200);
+      sound.elevatorDing();
+    }
+    p.destroy();
+  }
+
+  private selectWeapon(index: number): void {
+    if (index < 0 || index >= this.weapons.length) return;
+    if (index === this.currentWeapon) return;
+    this.currentWeapon = index;
+    sound.uiClick();
+    this.hud.setWeapon(this.weapons[index].config.name);
   }
 
   override update(time: number, delta: number): void {
@@ -290,9 +358,10 @@ export class GameScene extends Phaser.Scene {
       body.setVelocity(body.velocity.x / worldFactor, body.velocity.y / worldFactor);
     }
 
-    // Shoot (hold-to-fire)
+    // Shoot (hold-to-fire) — uses the currently selected weapon
     if (pointer.leftButtonDown() && !this.player.isSliding) {
-      const fired = this.pistol.tryFire(
+      const weapon = this.weapons[this.currentWeapon];
+      const fired = weapon.tryFire(
         time,
         this.player.shoulderX,
         this.player.shoulderY,
@@ -300,9 +369,7 @@ export class GameScene extends Phaser.Scene {
       );
       if (fired) {
         this.player.flashMuzzle(time);
-        // Muzzle flash particles at the spawn point (a bit in front of the
-        // shoulder), not at the gun-arm tip.
-        const off = SideScrollerConfig.pistol.spawnOffset;
+        const off = weapon.config.spawnOffset;
         const mx = this.player.shoulderX + Math.cos(this.player.aimAngle) * off;
         const my = this.player.shoulderY + Math.sin(this.player.aimAngle) * off;
         this.particles.muzzleFlash(mx, my, this.player.aimAngle);
@@ -327,7 +394,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Bullet trail visuals follow each active projectile
-    this.pistol.update();
+    for (const w of this.weapons) w.update();
     this.guardGun.update();
 
     this.combo.update(time);
@@ -617,6 +684,7 @@ export class GameScene extends Phaser.Scene {
             kills: this.combo.totalKills,
             best: this.combo.best,
             score: this.combo.score,
+            hasAutoStapler: this.hasAutoStapler,
           });
         },
       });

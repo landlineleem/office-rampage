@@ -2,17 +2,51 @@ import Phaser from "phaser";
 import { SideScrollerConfig } from "./config";
 import { sound } from "../../core/Sound";
 
-// Trail + glow management shared by both weapons. We attach a trail
-// sprite and a glow sprite to each bullet so the visual lines up with
-// where the projectile actually is. Sprites are cached on the bullet
-// via setData so the same pool-recycled bullet keeps its trail across
-// fires.
+// ---------- Weapon definitions ----------
+
+export interface WeaponConfig {
+  name: string;
+  shortName: string;
+  fireRateMs: number;
+  bulletSpeed: number;
+  bulletLifeMs: number;
+  spawnOffset: number;
+  spread: number; // radians of inaccuracy each shot
+  shotStrength: number; // sound volume multiplier
+  bulletTextureKey: string;
+}
+
+export const SINGLE_STAPLER: WeaponConfig = {
+  name: "STAPLER",
+  shortName: "STAPLER",
+  fireRateMs: SideScrollerConfig.pistol.fireRateMs,
+  bulletSpeed: SideScrollerConfig.pistol.bulletSpeed,
+  bulletLifeMs: SideScrollerConfig.pistol.bulletLifeMs,
+  spawnOffset: SideScrollerConfig.pistol.spawnOffset,
+  spread: 0,
+  shotStrength: 1.0,
+  bulletTextureKey: "staple",
+};
+
+export const AUTO_STAPLER: WeaponConfig = {
+  name: "AUTO STAPLER",
+  shortName: "AUTO",
+  fireRateMs: 75,
+  bulletSpeed: 1050,
+  bulletLifeMs: 850,
+  spawnOffset: 26,
+  spread: 0.07, // slight inaccuracy
+  shotStrength: 0.7,
+  bulletTextureKey: "staple",
+};
+
+// ---------- Bullet trail helpers (unchanged) ----------
 
 function ensureTrail(
   scene: Phaser.Scene,
   bullet: Phaser.Physics.Arcade.Sprite,
   trailKey: string
-): { trail: Phaser.GameObjects.Sprite; glow: Phaser.GameObjects.Sprite } {
+): void {
   let trail = bullet.getData("trail") as Phaser.GameObjects.Sprite | undefined;
   let glow = bullet.getData("glow") as Phaser.GameObjects.Sprite | undefined;
   if (!trail) {
@@ -30,7 +64,6 @@ function ensureTrail(
     glow.setScale(1.6);
     bullet.setData("glow", glow);
   }
-  return { trail, glow };
 }
 
 function showTrail(
@@ -73,25 +106,32 @@ export function updateBulletTrails(
   });
 }
 
-export class Pistol {
+// ---------- Player weapon ----------
+
+export class PlayerWeapon {
   scene: Phaser.Scene;
+  config: WeaponConfig;
   bullets: Phaser.Physics.Arcade.Group;
   lastFire = 0;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, config: WeaponConfig) {
     this.scene = scene;
+    this.config = config;
     this.bullets = scene.physics.add.group({
-      defaultKey: "staple",
-      maxSize: 100,
+      defaultKey: config.bulletTextureKey,
+      maxSize: 120,
       allowGravity: false,
     });
   }
 
-  tryFire(now: number, shoulderX: number, shoulderY: number, angle: number): boolean {
-    if (now - this.lastFire < SideScrollerConfig.pistol.fireRateMs) return false;
+  tryFire(now: number, shoulderX: number, shoulderY: number, baseAngle: number): boolean {
+    if (now - this.lastFire < this.config.fireRateMs) return false;
     this.lastFire = now;
 
-    const off = SideScrollerConfig.pistol.spawnOffset;
+    const spread = this.config.spread;
+    const angle = spread > 0 ? baseAngle + (Math.random() - 0.5) * spread * 2 : baseAngle;
+
+    const off = this.config.spawnOffset;
     const sx = shoulderX + Math.cos(angle) * off;
     const sy = shoulderY + Math.sin(angle) * off;
 
@@ -105,18 +145,18 @@ export class Pistol {
     body.setSize(8, 4).setOffset(2, 1);
     b.rotation = angle;
 
-    const sp = SideScrollerConfig.pistol.bulletSpeed;
+    const sp = this.config.bulletSpeed;
     body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
 
     ensureTrail(this.scene, b, "bullet_trail_player");
     showTrail(b, angle, 0xffe066);
 
-    this.scene.time.delayedCall(SideScrollerConfig.pistol.bulletLifeMs, () => {
+    this.scene.time.delayedCall(this.config.bulletLifeMs, () => {
       if (!b.active) return;
       this.recycle(b);
     });
 
-    sound.gunshot(1.0);
+    sound.gunshot(this.config.shotStrength);
     return true;
   }
 
@@ -132,6 +172,11 @@ export class Pistol {
     updateBulletTrails(this.bullets, 0xffe066);
   }
 }
+
+// Backwards-compatible alias so other files keep working
+export const Pistol = PlayerWeapon;
+
+// ---------- Guard weapon (unchanged) ----------
 
 export class GuardGun {
   scene: Phaser.Scene;

@@ -9,6 +9,7 @@ interface ClearData {
   kills: number;
   best: number;
   score: number;
+  hasAutoStapler?: boolean;
 }
 
 const FONT = "ui-monospace, monospace";
@@ -110,6 +111,7 @@ export class LevelClearedScene extends Phaser.Scene {
           score: data.score,
           kills: data.kills,
           bestCombo: data.best,
+          hasAutoStapler: data.hasAutoStapler ?? false,
         });
       } else {
         this.scene.start("Game", { levelIndex: 0 });

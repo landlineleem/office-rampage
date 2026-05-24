@@ -88,6 +88,9 @@ export class BootScene extends Phaser.Scene {
     // Custom mouse crosshair
     this.makeTexture("crosshair", 36, 36, (g) => this.drawCrosshair(g));
 
+    // Weapon pickup icon
+    this.makeTexture("auto_stapler_pickup", 56, 32, (g) => this.drawAutoStaplerPickup(g));
+
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
     this.makeTexture("desk", 200, 96, (g) => this.drawReceptionDesk(g));
@@ -465,6 +468,35 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, (1 - r / 8) * 0.4);
       g.fillCircle(8, 8, r);
     }
+  }
+
+  private drawAutoStaplerPickup(g: Phaser.GameObjects.Graphics): void {
+    // 56 x 32 — chunky auto stapler icon (looks like a long mean stapler)
+    const W = 56;
+    // Drop shadow underneath
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(W / 2, 28, 40, 6);
+    // Lower body (red)
+    g.fillStyle(0xc73a3a, 1);
+    g.fillRoundedRect(4, 14, W - 8, 12, 3);
+    // Lower body shading
+    g.fillStyle(0x8a1818, 1);
+    g.fillRect(4, 22, W - 8, 4);
+    // Upper jaw (gunmetal)
+    g.fillStyle(0x3a3f4c, 1);
+    g.fillRoundedRect(8, 6, W - 16, 10, 2);
+    g.fillStyle(0x5a5f6c, 1);
+    g.fillRect(8, 6, W - 16, 2);
+    // Hinge pin
+    g.fillStyle(0xe8b33a, 1);
+    g.fillCircle(W - 12, 12, 3);
+    // Trigger / button indicator
+    g.fillStyle(0xffe066, 1);
+    g.fillRect(W - 18, 16, 4, 6);
+    // Outline
+    g.lineStyle(1, 0x12141b, 1);
+    g.strokeRoundedRect(4, 14, W - 8, 12, 3);
+    g.strokeRoundedRect(8, 6, W - 16, 10, 2);
   }
 
   private drawCrosshair(g: Phaser.GameObjects.Graphics): void {

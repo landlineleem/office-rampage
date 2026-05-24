@@ -13,6 +13,7 @@ export class HUD {
   private caffeinePulse: Phaser.GameObjects.Rectangle;
   private comboText: Phaser.GameObjects.Text;
   private comboSubtext: Phaser.GameObjects.Text;
+  private weaponText: Phaser.GameObjects.Text;
   private floorText: Phaser.GameObjects.Text;
   private scoreText: Phaser.GameObjects.Text;
   private rightPanel: Phaser.GameObjects.Rectangle;
@@ -28,9 +29,9 @@ export class HUD {
     const max = SideScrollerConfig.player.maxHP;
     this.prevHp = max;
 
-    // --- Left panel (HP + caffeine + combo) ---
+    // --- Left panel (HP + caffeine + combo + weapon) ---
     this.leftPanel = scene.add
-      .rectangle(0, 0, 280, 130, 0x000000, 0.45)
+      .rectangle(0, 0, 280, 158, 0x000000, 0.45)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(z - 1);
@@ -106,6 +107,16 @@ export class HUD {
         fontFamily: FONT,
         fontSize: "10px",
         color: "#888",
+        letterSpacing: 1,
+      })
+      .setScrollFactor(0)
+      .setDepth(z + 2);
+
+    this.weaponText = scene.add
+      .text(16, 134, "▸ STAPLER", {
+        fontFamily: FONT,
+        fontSize: "13px",
+        color: "#e8b33a",
         letterSpacing: 1,
       })
       .setScrollFactor(0)
@@ -232,6 +243,18 @@ export class HUD {
     this.scoreText.setText(`SCORE  ${score.toString().padStart(5, "0")}`);
   }
 
+  setWeapon(name: string): void {
+    this.weaponText.setText(`▸ ${name}`);
+    this.scene.tweens.add({
+      targets: this.weaponText,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      yoyo: true,
+      duration: 120,
+      ease: "Cubic.easeOut",
+    });
+  }
+
   // Show a brief notification at the top of the screen (e.g. "FLOOR CLEARED")
   showBanner(text: string, durationMs = 1600): void {
     const w = this.scene.scale.width;
@@ -280,6 +303,7 @@ export class HUD {
       this.caffeinePulse,
       this.comboText,
       this.comboSubtext,
+      this.weaponText,
       this.floorText,
       this.scoreText,
     ].forEach((o) => o.setVisible(visible));
