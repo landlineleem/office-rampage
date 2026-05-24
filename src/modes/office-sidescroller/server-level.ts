@@ -22,8 +22,9 @@ export const serverLevel: LevelData = {
     { x: 1700, y: 432, width: 76, height: 108 },
     // Floor router
     { x: 2100, y: 488, width: 200, height: 52 },
-    // Mainframe (taller wall)
-    { x: 2700, y: 410, width: 96, height: 130 },
+    // Mainframe — slightly lower top edge (was y=410) so the jump up is
+    // achievable without pixel-perfect timing.
+    { x: 2700, y: 422, width: 96, height: 118 },
     // Cable trough
     { x: 3200, y: 488, width: 240, height: 52 },
     // Final blade server

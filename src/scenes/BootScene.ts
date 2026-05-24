@@ -77,10 +77,12 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("particle_smoke", 24, 24, (g) => this.drawParticleSmoke(g));
     this.makeTexture("particle_debris", 6, 6, (g) => this.drawParticleDebris(g));
 
-    // Bullet trail glows (stretched gradient bars, ADD-blended)
-    this.makeTexture("bullet_trail_player", 60, 8, (g) => this.drawBulletTrail(g, 60, 8, 0xffe066));
-    this.makeTexture("bullet_trail_guard", 48, 6, (g) => this.drawBulletTrail(g, 48, 6, 0xffa040));
-    this.makeTexture("bullet_glow", 16, 16, (g) => this.drawBulletGlow(g));
+    // Bullet trail glows (short subtle streaks, ADD-blended). Made
+    // smaller and lower-alpha than before — long bright yellow trails
+    // were making staples read as fireballs instead of office staples.
+    this.makeTexture("bullet_trail_player", 28, 6, (g) => this.drawBulletTrail(g, 28, 6, 0xffffff));
+    this.makeTexture("bullet_trail_guard", 32, 5, (g) => this.drawBulletTrail(g, 32, 5, 0xffa040));
+    this.makeTexture("bullet_glow", 10, 10, (g) => this.drawBulletGlow(g));
 
     // Vignette via raw canvas (Phaser Graphics doesn't do real radial gradients)
     this.makeVignetteCanvas("vignette", 1280, 720);
@@ -118,11 +120,11 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("cubicle_wall", 96, 96, (g) => this.drawCubicleWall(g));
     this.makeTexture("carpet_tile", 96, 48, (g) => this.drawCarpet(g));
     this.makeTexture("cubicle_divider", 200, 130, (g) => this.drawCubicleDivider(g));
-    this.makeTexture("office_chair", 60, 100, (g) => this.drawOfficeChair(g));
+    this.makeTexture("office_chair", 60, 88, (g) => this.drawOfficeChair(g));
     this.makeTexture("hanging_light", 160, 24, (g) => this.drawHangingLight(g));
     this.makeTexture("water_cooler_2", 60, 130, (g) => this.drawWaterCooler(g));
     this.makeTexture("server_rack", 84, 200, (g) => this.drawServerRack(g));
-    this.makeTexture("office_door", 60, 140, (g) => this.drawOfficeDoor(g));
+    this.makeTexture("office_door", 64, 184, (g) => this.drawOfficeDoor(g));
     // New themes
     this.makeTexture("boardroom_wall", 96, 96, (g) => this.drawBoardroomWall(g));
     this.makeTexture("hardwood_tile", 96, 48, (g) => this.drawHardwoodTile(g));
@@ -487,22 +489,22 @@ export class BootScene extends Phaser.Scene {
     h: number,
     color: number
   ): void {
-    // Horizontal gradient — fully transparent on left, opaque on right.
-    // Sprite uses origin (1, 0.5) so the bright end is at the bullet and
-    // the trail fades off behind.
+    // Subtle horizontal streak — transparent on left, semi-opaque at the
+    // bullet end. Sharper curve so most of the trail is faint.
     for (let x = 0; x < w; x++) {
       const t = x / (w - 1);
-      const alpha = Math.pow(t, 1.6) * 0.85;
+      const alpha = Math.pow(t, 2.4) * 0.55;
       g.fillStyle(color, alpha);
       g.fillRect(x, 0, 1, h);
     }
   }
 
   private drawBulletGlow(g: Phaser.GameObjects.Graphics): void {
-    // Soft 16x16 radial glow — drawn behind each bullet via ADD blend.
-    for (let r = 8; r >= 1; r--) {
-      g.fillStyle(0xffffff, (1 - r / 8) * 0.4);
-      g.fillCircle(8, 8, r);
+    // Tiny soft halo — kept small so the staple texture itself is the
+    // dominant visual.
+    for (let r = 5; r >= 1; r--) {
+      g.fillStyle(0xffffff, (1 - r / 5) * 0.22);
+      g.fillCircle(5, 5, r);
     }
   }
 
@@ -1094,27 +1096,23 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawOfficeChair(g: Phaser.GameObjects.Graphics): void {
-    // 60 x 100 — rolling office chair (side view).
-    const W = 60, H = 100;
-    // Wheel base (5-star spider)
+    // 60 x 88 — rolling office chair (side view), real chair proportions
+    // relative to a ~156px character.
+    const W = 60, H = 88;
     g.fillStyle(0x1f232c, 1);
-    g.fillRect(8, H - 12, W - 16, 6);
-    g.fillCircle(12, H - 4, 5);
-    g.fillCircle(W - 12, H - 4, 5);
-    // Hydraulic pole
+    g.fillRect(8, H - 10, W - 16, 5);
+    g.fillCircle(12, H - 3, 4);
+    g.fillCircle(W - 12, H - 3, 4);
     g.fillStyle(0x4a4d58, 1);
-    g.fillRect(W / 2 - 3, H - 50, 6, 38);
-    // Seat
+    g.fillRect(W / 2 - 3, H - 44, 6, 34);
     g.fillStyle(0x2a2f3a, 1);
-    g.fillRect(8, H - 60, W - 16, 14);
-    // Backrest
+    g.fillRect(8, H - 52, W - 16, 12);
     g.fillStyle(0x2a2f3a, 1);
-    g.fillRect(W - 22, H - 100, 14, 50);
+    g.fillRect(W - 22, H - 86, 14, 40);
     g.fillStyle(0x3a3f4c, 1);
-    g.fillRect(W - 20, H - 98, 10, 46);
-    // Armrest
+    g.fillRect(W - 20, H - 84, 10, 36);
     g.fillStyle(0x4a4d58, 1);
-    g.fillRect(8, H - 70, 8, 22);
+    g.fillRect(8, H - 60, 8, 18);
   }
 
   private drawHangingLight(g: Phaser.GameObjects.Graphics): void {
@@ -1172,9 +1170,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawOfficeDoor(g: Phaser.GameObjects.Graphics): void {
-    // 60 x 140 — closed office door, brown wood with frosted glass panel
-    // in the top third and a brass doorknob on the right.
-    const W = 60, H = 140;
+    // 64 x 184 — closed office door, brown wood with frosted glass panel.
+    // Sized so a 156px character can walk through it comfortably.
+    const W = 64, H = 184;
     // Frame
     g.fillStyle(0x2a1d10, 1);
     g.fillRect(0, 0, W, H);
@@ -1193,19 +1191,19 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(10, 16, W - 20, 30);
     // Glass panel frame
     g.lineStyle(2, 0x4a2d10, 1);
-    g.strokeRect(8, 12, W - 16, 40);
+    g.strokeRect(8, 12, W - 16, 60);
     // Lower panel divider
     g.fillStyle(0x4a2d10, 1);
-    g.fillRect(8, 80, W - 16, 2);
+    g.fillRect(8, 100, W - 16, 2);
     // Doorknob
     g.fillStyle(0xc59842, 1);
-    g.fillCircle(W - 12, 100, 4);
+    g.fillCircle(W - 12, H / 2 + 10, 5);
     g.fillStyle(0xe8b33a, 1);
-    g.fillCircle(W - 13, 99, 1.5);
+    g.fillCircle(W - 13, H / 2 + 8, 1.5);
     // Hinge marks
     g.fillStyle(0x1a1006, 1);
-    g.fillCircle(5, 20, 2);
-    g.fillCircle(5, 120, 2);
+    g.fillCircle(5, 24, 2);
+    g.fillCircle(5, H - 24, 2);
   }
 
   private drawServerRack(g: Phaser.GameObjects.Graphics): void {

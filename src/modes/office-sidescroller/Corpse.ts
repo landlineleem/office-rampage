@@ -2,7 +2,18 @@ import Phaser from "phaser";
 
 // A simpler death animation: small launch in hit direction, falls with
 // gravity, tilts onto its side, settles for ~2s, then fades out and
-// is destroyed. No more wild spinning.
+// is destroyed.
+//
+// Scale-aware: pass the enemy's display scale in so the corpse matches
+// the live enemy's silhouette. Earlier versions called setScale() AFTER
+// setDisplaySize() which silently overrode the display size back to
+// `sourceTextureWidth * scale` — for the AI guard sprite (377x661
+// source) that exploded the corpse to several hundred pixels tall.
+
+const BASE_W = 76;
+const BASE_H = 156;
+const BODY_W = 36;
+const BODY_H = 144;
 
 export class Corpse extends Phaser.Physics.Arcade.Sprite {
   constructor(
@@ -11,7 +22,8 @@ export class Corpse extends Phaser.Physics.Arcade.Sprite {
     y: number,
     textureKey: string,
     hitDirection: number,
-    facingRight: boolean
+    facingRight: boolean,
+    scale = 1
   ) {
     super(scene, x, y, textureKey);
     scene.add.existing(this);
@@ -20,20 +32,23 @@ export class Corpse extends Phaser.Physics.Arcade.Sprite {
     this.setOrigin(0.5, 1.0);
     this.setDepth(7);
     this.setFlipX(!facingRight);
-    this.setDisplaySize(76, 156);
+
+    const dispW = BASE_W * scale;
+    const dispH = BASE_H * scale;
+    const bodyW = BODY_W * scale;
+    const bodyH = BODY_H * scale;
+    this.setDisplaySize(dispW, dispH);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setGravityY(2200);
-    // Modest launch — feel like the hit "knocked them off their feet",
-    // not "shot them into orbit".
     body.setVelocityX(hitDirection * 90);
     body.setVelocityY(-160);
     body.setCollideWorldBounds(false);
     const src = this.texture.source[0];
-    const sx = 76 / src.width;
-    const sy = 156 / src.height;
-    body.setSize(36 / sx, 144 / sy);
-    body.setOffset(((76 - 36) / 2) / sx, (156 - 144) / sy);
+    const sx = dispW / src.width;
+    const sy = dispH / src.height;
+    body.setSize(bodyW / sx, bodyH / sy);
+    body.setOffset(((dispW - bodyW) / 2) / sx, (dispH - bodyH) / sy);
 
     // Tilt to a "fallen on side" pose — single smooth rotation, no spin.
     const fallenRot = hitDirection >= 0 ? Math.PI / 2.3 : -Math.PI / 2.3;

@@ -37,7 +37,7 @@ export const SINGLE_STAPLER: WeaponConfig = {
   bulletDamage: 1,
   pelletsPerShot: 1,
   pelletSpread: 0,
-  bulletTint: 0xffffff,
+  bulletTint: 0xffffff, // silver (no tint)
 };
 
 export const AUTO_STAPLER: WeaponConfig = {
@@ -54,7 +54,7 @@ export const AUTO_STAPLER: WeaponConfig = {
   bulletDamage: 1,
   pelletsPerShot: 1,
   pelletSpread: 0,
-  bulletTint: 0xffffff,
+  bulletTint: 0xffffff, // silver — these are still office staples, not lasers
 };
 
 export const HOLE_PUNCH: WeaponConfig = {
@@ -112,7 +112,9 @@ function ensureTrail(
     glow.setOrigin(0.5, 0.5);
     glow.setBlendMode(Phaser.BlendModes.ADD);
     glow.setDepth(8);
-    glow.setScale(1.6);
+    // Keep glow small so the staple itself is visible — earlier 1.6x
+    // scale on the 16x16 texture made bullets read as glowy orbs.
+    glow.setScale(1.0);
     bullet.setData("glow", glow);
   }
 }
@@ -212,7 +214,11 @@ export class PlayerWeapon {
       b.setTint(this.config.bulletTint);
       b.setData("damage", this.config.bulletDamage);
       ensureTrail(this.scene, b, "bullet_trail_player");
-      showTrail(b, angle, this.config.bulletTint === 0xffffff ? 0xffe066 : this.config.bulletTint);
+      // Silver default trail (matches the staple metal). Colored weapons
+      // (Hole Punch, Swingline) get a trail that matches their bullet.
+      const trailTint =
+        this.config.bulletTint === 0xffffff ? 0xd6d6dc : this.config.bulletTint;
+      showTrail(b, angle, trailTint);
       this.scene.time.delayedCall(this.config.bulletLifeMs, () => {
         if (!b.active) return;
         this.recycle(b);

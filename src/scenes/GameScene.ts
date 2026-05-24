@@ -358,11 +358,18 @@ export class GameScene extends Phaser.Scene {
         sound.death();
         this.particles.guardDeath(dx, dy - 60);
         this.fx.guardKill();
-        const corpse = new Corpse(this, dx, dy, "guard_idle", hitDir, eFacingRight);
-        // Inherit the enemy's tint + scale so the corpse looks like the
-        // archetype that died.
+        const corpse = new Corpse(
+          this,
+          dx,
+          dy,
+          "guard_idle",
+          hitDir,
+          eFacingRight,
+          e.config.scale
+        );
+        // Inherit the enemy's tint so the corpse keeps its archetype
+        // color (heavy = dark steel, sniper = red, etc.)
         corpse.setTint(e.config.tint);
-        corpse.setScale(e.config.scale);
         this.corpses.add(corpse);
         this.combo.registerKill(this.time.now, e.config.scoreValue);
         this.spawnScorePopup(dx, dy - 80, e.config.scoreValue * this.combo.count);
