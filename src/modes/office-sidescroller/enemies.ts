@@ -2,6 +2,16 @@ import Phaser from "phaser";
 import { SideScrollerConfig } from "./config";
 import { GuardGun } from "./weapons";
 
+// Display dimensions — same convention as the player so AI guard sprites
+// and procedural placeholders both end up the same on-screen size.
+const STAND_W = 76;
+const STAND_H = 156;
+const BODY_W = 36;
+const BODY_H = 144;
+const SHOULDER_OFFSET_Y = -118;
+const ARM_DISPLAY_W = 66;
+const ARM_DISPLAY_H = 18;
+
 export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   lastContact = 0;
@@ -15,29 +25,56 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
   private arm: Phaser.GameObjects.Sprite;
   private walkPhase = 0;
   private gun: GuardGun;
+  private currentPoseKey = "";
+  private hasRealWalkFrames = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, gun: GuardGun) {
     super(scene, x, y, "guard_idle");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setOrigin(0.5, 1.0); // y = feet, matches player convention
+    this.setOrigin(0.5, 1.0);
+    this.setDepth(9);
+
+    this.hasRealWalkFrames =
+      this.isRealArt("guard_walk_0") && this.isRealArt("guard_walk_1");
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(18, 44);
-    body.setOffset((32 - 18) / 2, 56 - 44);
     body.setGravityY(SideScrollerConfig.player.gravity);
     body.setCollideWorldBounds(true);
+
+    this.applyPose("guard_idle");
 
     this.hp = SideScrollerConfig.guard.hp;
     this.patrolCenter = x;
     this.patrolMin = x - SideScrollerConfig.guard.patrolRange / 2;
     this.patrolMax = x + SideScrollerConfig.guard.patrolRange / 2;
     this.gun = gun;
-    this.setDepth(9);
 
     this.arm = scene.add.sprite(x, y, "guard_arm");
     this.arm.setOrigin(0, 0.5);
+    this.arm.setDisplaySize(ARM_DISPLAY_W, ARM_DISPLAY_H);
     this.arm.setDepth(10);
+  }
+
+  private isRealArt(key: string): boolean {
+    if (!this.scene.textures.exists(key)) return false;
+    return this.scene.textures.get(key).source[0].width > 96;
+  }
+
+  private applyPose(key: string, feetInset = 4): void {
+    if (this.currentPoseKey === key) return;
+    this.currentPoseKey = key;
+    this.setTexture(key);
+    this.setDisplaySize(STAND_W, STAND_H);
+    const src = this.texture.source[0];
+    const sx = STAND_W / src.width;
+    const sy = STAND_H / src.height;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setSize(BODY_W / sx, BODY_H / sy);
+    body.setOffset(
+      ((STAND_W - BODY_W) / 2) / sx,
+      (STAND_H - BODY_H - feetInset) / sy
+    );
   }
 
   think(
@@ -49,7 +86,10 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
   ): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const dx = playerX - this.x;
-    const dy = playerY - this.y;
+    // Sight check uses the guard's torso, not feet, so the player's chest
+    // height counts as "at my level" too.
+    const sightTargetY = playerY + SHOULDER_OFFSET_Y;
+    const dy = sightTargetY - (this.y + SHOULDER_OFFSET_Y);
     const dist = Math.hypot(dx, dy);
     const canSee =
       dist < SideScrollerConfig.guard.sightDistance &&
@@ -70,13 +110,14 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
         if (time - this.lastShotAt >= SideScrollerConfig.guard.fireRateMs) {
           this.lastShotAt = time;
           const angle = Math.atan2(dy, dx);
-          const sx = this.x + Math.cos(angle) * 22;
-          const sy = this.y - 30 + Math.sin(angle) * 22;
+          const shoulderX = this.x;
+          const shoulderY = this.y + SHOULDER_OFFSET_Y;
+          const sx = shoulderX + Math.cos(angle) * ARM_DISPLAY_W;
+          const sy = shoulderY + Math.sin(angle) * ARM_DISPLAY_W;
           this.gun.fire(sx, sy, angle);
         }
       }
     } else {
-      // Patrol back to center
       this.aiState = "patrol";
       const sp = SideScrollerConfig.guard.walkSpeed * worldFactor;
       if (this.facingRight) {
@@ -89,23 +130,26 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
       if (Math.abs(body.velocity.x) > 5) this.walkPhase += delta * 0.01;
     }
 
-    // Animation
-    if (this.aiState === "patrol" && Math.abs(body.velocity.x) > 5) {
-      const f = Math.floor(this.walkPhase) % 2;
-      this.setTexture(f === 0 ? "guard_walk_0" : "guard_walk_1");
-    } else {
-      this.setTexture("guard_idle");
+    // Pose selection — fall back to idle if real walk frames aren't loaded.
+    let poseKey = "guard_idle";
+    if (
+      this.aiState === "patrol" &&
+      Math.abs(body.velocity.x) > 5 &&
+      this.hasRealWalkFrames
+    ) {
+      poseKey = Math.floor(this.walkPhase) % 2 === 0 ? "guard_walk_0" : "guard_walk_1";
     }
+    this.applyPose(poseKey);
     this.setFlipX(!this.facingRight);
 
-    // Arm at shoulder (top of torso ≈ 30px above feet)
+    // Aiming arm
     const showArm = this.aiState !== "patrol";
     this.arm.setVisible(showArm);
     if (showArm) {
-      const sx = this.x;
-      const sy = this.y - 30;
+      const shoulderX = this.x;
+      const shoulderY = this.y + SHOULDER_OFFSET_Y;
       const angle = Math.atan2(dy, dx);
-      this.arm.setPosition(sx, sy);
+      this.arm.setPosition(shoulderX, shoulderY);
       this.arm.setRotation(angle);
       this.arm.setFlipY(!this.facingRight);
     }
