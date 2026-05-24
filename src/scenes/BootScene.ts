@@ -20,7 +20,6 @@ const REAL_ART_KEYS = [
   "guard_idle",
   "guard_walk_0",
   "guard_walk_1",
-  "lobby_background",
 ];
 
 export class BootScene extends Phaser.Scene {
@@ -72,24 +71,26 @@ export class BootScene extends Phaser.Scene {
     // Muzzle flash
     this.makeTexture("muzzle", 16, 12, (g) => this.drawMuzzle(g));
 
-    // Level props
-    this.makeTexture("desk", 96, 44, (g) => this.drawReceptionDesk(g));
-    this.makeTexture("file_cabinet", 40, 60, (g) => this.drawFileCabinet(g));
-    this.makeTexture("low_obstacle", 96, 32, (g) => this.drawLowObstacle(g));
-    this.makeTexture("elevator", 100, 130, (g) => this.drawElevator(g));
-    this.makeTexture("plant", 36, 60, (g) => this.drawFloorPlant(g));
-    this.makeTexture("column", 32, 200, (g) => this.drawColumn(g));
-    this.makeTexture("monitor_wall", 60, 36, (g) => this.drawWallMonitor(g));
-    this.makeTexture("lamppost", 24, 180, (g) => this.drawLamppost(g));
-    this.makeTexture("revolving_door", 80, 160, (g) => this.drawRevolvingDoor(g));
+    // Level props — scaled up roughly 2-3x from v0.x to match the new
+    // ~156px-tall character.
+    this.makeTexture("desk", 200, 96, (g) => this.drawReceptionDesk(g));
+    this.makeTexture("file_cabinet", 76, 108, (g) => this.drawFileCabinet(g));
+    this.makeTexture("low_obstacle", 160, 66, (g) => this.drawLowObstacle(g));
+    this.makeTexture("elevator", 168, 250, (g) => this.drawElevator(g));
+    this.makeTexture("plant", 88, 144, (g) => this.drawFloorPlant(g));
+    this.makeTexture("column", 60, 380, (g) => this.drawColumn(g));
+    this.makeTexture("monitor_wall", 120, 72, (g) => this.drawWallMonitor(g));
+    this.makeTexture("lamppost", 30, 260, (g) => this.drawLamppost(g));
+    this.makeTexture("revolving_door", 140, 280, (g) => this.drawRevolvingDoor(g));
+    this.makeTexture("ceiling_light", 80, 16, (g) => this.drawCeilingLight(g));
 
     // Background layers
-    this.makeTexture("sky_gradient", 64, 360, (g) => this.drawSkyGradient(g));
-    this.makeTexture("skyline_back", 800, 200, (g) => this.drawSkyline(g, "back"));
-    this.makeTexture("skyline_front", 800, 240, (g) => this.drawSkyline(g, "front"));
-    this.makeTexture("pavement_tile", 64, 32, (g) => this.drawPavement(g));
-    this.makeTexture("marble_tile", 64, 32, (g) => this.drawMarble(g));
-    this.makeTexture("lobby_wall", 64, 64, (g) => this.drawLobbyWall(g));
+    this.makeTexture("sky_gradient", 64, 400, (g) => this.drawSkyGradient(g));
+    this.makeTexture("skyline_back", 1000, 240, (g) => this.drawSkyline(g, "back"));
+    this.makeTexture("skyline_front", 1000, 300, (g) => this.drawSkyline(g, "front"));
+    this.makeTexture("pavement_tile", 96, 48, (g) => this.drawPavement(g));
+    this.makeTexture("marble_tile", 96, 48, (g) => this.drawMarble(g));
+    this.makeTexture("lobby_wall", 96, 96, (g) => this.drawLobbyWall(g));
 
     this.scene.start("Menu");
   }
@@ -384,188 +385,289 @@ export class BootScene extends Phaser.Scene {
   }
 
   // ---------- Props ----------
+  // Style note: cohesive limited palette, flat shading, strong silhouettes.
+  // Gameplay objects (desk/cabinet/elevator/wet-floor) carry visual weight;
+  // pure decor (columns/plants/monitors) is quieter.
+
   private drawReceptionDesk(g: Phaser.GameObjects.Graphics): void {
-    // 96 wide x 44 tall
-    g.fillStyle(0x3a2c1c, 1);
-    g.fillRoundedRect(0, 0, 96, 44, 4);
-    g.fillStyle(0x8b6a4a, 1);
-    g.fillRoundedRect(2, 2, 92, 40, 3);
-    g.fillStyle(0x6b4a2a, 1);
-    g.fillRoundedRect(2, 2, 92, 8, 2); // counter top
-    // Wood grain
-    g.lineStyle(1, 0x6b4a2a, 0.5);
-    for (let i = 14; i < 40; i += 6) g.lineBetween(4, i, 92, i);
-    // Computer monitor on top
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(38, -16, 22, 16, 2);
-    g.fillStyle(0x4cc4ff, 0.8);
-    g.fillRoundedRect(40, -14, 18, 12, 1);
-    g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(47, -2, 4, 3);
-    g.fillRect(43, 1, 12, 2);
-    // Pen cup
-    g.fillStyle(0xc4c4c4, 1);
-    g.fillRect(74, -5, 6, 6);
-    g.fillStyle(0xff5252, 1);
-    g.fillRect(75, -8, 1, 4);
-    g.fillStyle(0x4cc4ff, 1);
-    g.fillRect(77, -8, 1, 4);
-    g.lineStyle(1, 0x1a1d28, 1);
-    g.strokeRoundedRect(0, 0, 96, 44, 4);
+    // 200 x 96 — a wide warm-wood reception desk.
+    const W = 200, H = 96;
+    // Counter top (darker)
+    g.fillStyle(0x3a2814, 1);
+    g.fillRect(0, 0, W, 12);
+    // Front body
+    g.fillStyle(0x8a6438, 1);
+    g.fillRect(0, 12, W, H - 12);
+    // Front-panel shading
+    g.fillStyle(0x6e4f2c, 1);
+    g.fillRect(0, H - 16, W, 16);
+    // Vertical panel divisions
+    g.fillStyle(0x6e4f2c, 1);
+    g.fillRect(W / 3 - 2, 12, 4, H - 12);
+    g.fillRect((W / 3) * 2 - 2, 12, 4, H - 12);
+    // Brass kickplate
+    g.fillStyle(0x9a7b3a, 1);
+    g.fillRect(0, H - 6, W, 6);
+    // Brand placard (gold rectangle on the front)
+    g.fillStyle(0xc9982a, 1);
+    g.fillRect(W / 2 - 36, 36, 72, 18);
+    g.fillStyle(0x1e1408, 1);
+    g.fillRect(W / 2 - 28, 42, 56, 2);
+    g.fillRect(W / 2 - 28, 46, 40, 2);
   }
 
   private drawFileCabinet(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0x666b78, 1);
-    g.fillRoundedRect(0, 0, 40, 60, 2);
+    // 76 x 108 — steel filing cabinet, 3 drawers. Sized so the player can
+    // just barely jump on top of it.
+    const W = 76, H = 108;
     g.fillStyle(0x4a4f5c, 1);
-    g.fillRoundedRect(2, 2, 36, 56, 2);
-    // Drawers
-    for (let i = 0; i < 3; i++) {
-      const y = 4 + i * 18;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0x6a6f7c, 1);
+    g.fillRect(0, 0, W, 4);
+    g.fillStyle(0x3a3f4c, 1);
+    g.fillRect(W - 6, 0, 6, H);
+    const drawers = 3;
+    const drawerH = (H - 8) / drawers;
+    for (let i = 0; i < drawers; i++) {
+      const y = 6 + i * drawerH;
+      g.fillStyle(0x2a2f3a, 1);
+      g.fillRect(4, y, W - 8, 2);
       g.fillStyle(0x5a5f6c, 1);
-      g.fillRect(4, y, 32, 16);
-      g.fillStyle(0x3a3f4c, 1);
-      g.fillRect(16, y + 7, 8, 2); // handle
-      g.fillStyle(0x88ddff, 0.5);
-      g.fillRect(6, y + 2, 8, 4); // label
+      g.fillRect(4, y + 2, W - 8, 4);
+      g.fillStyle(0x1f232c, 1);
+      g.fillRect(W / 2 - 10, y + drawerH / 2, 20, 4);
+      g.fillStyle(0xe8e3d2, 1);
+      g.fillRect(W / 2 - 14, y + 6, 28, 6);
     }
-    g.lineStyle(1, 0x1a1d28, 1);
-    g.strokeRoundedRect(0, 0, 40, 60, 2);
   }
 
   private drawLowObstacle(g: Phaser.GameObjects.Graphics): void {
-    // A horizontal beam / banner / pipe hanging at a low height — you
-    // must slide under it.
-    g.fillStyle(0x6b3e1a, 1);
-    g.fillRect(0, 0, 96, 8);
-    g.fillStyle(0x8b6a4a, 1);
-    g.fillRect(0, 0, 96, 3);
-    g.fillStyle(0xff5252, 1);
-    g.fillRect(0, 8, 96, 16);
-    g.fillStyle(0xffffff, 1);
-    const label = "WET FLOOR";
-    g.fillStyle(0xffffff, 1);
-    // Just decorative blocks suggesting letters
-    for (let i = 0; i < label.length; i++) {
-      g.fillRect(8 + i * 8, 12, 5, 8);
+    // 160 x 66 — yellow/black hazard barrier you slide under.
+    const W = 160, H = 66;
+    // Hanging chains from ceiling (decorative top edge)
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(20, 0, 4, 6);
+    g.fillRect(W - 24, 0, 4, 6);
+    // Top bar
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(0, 4, W, 10);
+    // Yellow body with diagonal hazard stripes
+    g.fillStyle(0xe8b833, 1);
+    g.fillRect(0, 14, W, H - 22);
+    g.fillStyle(0x1f232c, 1);
+    const stripeW = 14;
+    for (let x = -H; x < W; x += stripeW * 2) {
+      g.fillTriangle(x, H - 8, x + stripeW, H - 8, x + stripeW + 16, 14);
+      g.fillTriangle(x, H - 8, x + 16, 14, x + stripeW + 16, 14);
     }
-    g.fillStyle(0x6b3e1a, 1);
-    g.fillRect(0, 24, 96, 4);
-    g.lineStyle(1, 0x1a1d28, 1);
-    g.strokeRect(0, 0, 96, 32);
+    // Top text band (lighter yellow)
+    g.fillStyle(0xf4d680, 1);
+    g.fillRect(8, 18, W - 16, 12);
+    g.fillStyle(0x1f232c, 1);
+    // Stylized "CAUTION" — just chunky blocks reading as letters
+    const letters = 7;
+    const letterW = ((W - 32) - (letters - 1) * 2) / letters;
+    for (let i = 0; i < letters; i++) {
+      g.fillRect(16 + i * (letterW + 2), 20, letterW, 8);
+    }
+    // Bottom bar
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(0, H - 8, W, 8);
   }
 
   private drawElevator(g: Phaser.GameObjects.Graphics): void {
-    // 100 x 130
-    g.fillStyle(0x3a3d48, 1);
-    g.fillRect(0, 0, 100, 130);
-    g.fillStyle(0xc4c4c4, 1);
-    g.fillRect(4, 4, 92, 122);
-    // Door split
-    g.fillStyle(0x9a9a9a, 1);
-    g.fillRect(48, 4, 4, 122);
-    // Door handles
-    g.fillStyle(0x4a4a4a, 1);
-    g.fillCircle(40, 80, 2);
-    g.fillCircle(60, 80, 2);
-    // Floor indicator (lit up)
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRect(40, 110, 20, 12);
-    g.fillStyle(0xffe066, 1);
-    g.fillRect(45, 113, 10, 6);
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRect(48, 115, 4, 2);
-    g.lineStyle(2, 0x1a1d28, 1);
-    g.strokeRect(0, 0, 100, 130);
+    // 168 x 250 — tall imposing elevator door, brushed steel, lit floor sign.
+    const W = 168, H = 250;
+    // Wall recess (dark) — elevator sits inside this frame
+    g.fillStyle(0x18181f, 1);
+    g.fillRect(0, 0, W, H);
+    // Steel frame
+    g.fillStyle(0x6b6e7a, 1);
+    g.fillRect(8, 8, W - 16, H - 16);
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(8, 8, W - 16, 6);
+    g.fillRect(8, H - 14, W - 16, 6);
+    // Inner doors (brushed steel)
+    g.fillStyle(0xb8bbc4, 1);
+    g.fillRect(16, 14, W - 32, H - 28);
+    // Subtle vertical brushed lines
+    g.fillStyle(0xa0a3ac, 0.7);
+    for (let x = 20; x < W - 16; x += 6) g.fillRect(x, 14, 1, H - 28);
+    // Door split (dark vertical line)
+    g.fillStyle(0x2a2d36, 1);
+    g.fillRect(W / 2 - 1, 14, 2, H - 28);
+    // Floor indicator panel (above door)
+    g.fillStyle(0x18181f, 1);
+    g.fillRect(W / 2 - 24, -22, 48, 18);
+    // Lit floor number
+    g.fillStyle(0xe8b33a, 1);
+    g.fillRect(W / 2 - 18, -18, 36, 10);
+    g.fillStyle(0x18181f, 1);
+    g.fillRect(W / 2 - 4, -16, 8, 6); // "1" digit
+    // Up arrow indicator
+    g.fillStyle(0x6abd5a, 1);
+    g.fillTriangle(W - 28, 28, W - 18, 16, W - 8, 28);
   }
 
   private drawFloorPlant(g: Phaser.GameObjects.Graphics): void {
+    // 88 x 144 — tall potted ficus, simple silhouette.
+    const W = 88, H = 144;
     // Pot
-    g.fillStyle(0x6b3e1a, 1);
-    g.fillTriangle(8, 38, 28, 38, 30, 60);
-    g.fillTriangle(8, 38, 30, 60, 6, 60);
-    g.fillStyle(0x4a2a10, 1);
-    g.fillRect(6, 38, 24, 4);
-    // Foliage
-    g.fillStyle(0x2e7a3a, 1);
-    g.fillEllipse(18, 22, 28, 28);
-    g.fillStyle(0x3e9a4a, 1);
-    g.fillCircle(10, 18, 7);
-    g.fillCircle(26, 18, 7);
-    g.fillCircle(18, 10, 8);
-    g.fillStyle(0x6abd5a, 1);
-    g.fillCircle(13, 14, 3);
-    g.fillCircle(23, 14, 3);
+    const potTop = H - 44;
+    g.fillStyle(0x3d2210, 1);
+    g.fillTriangle(14, potTop, W - 14, potTop, W - 8, H);
+    g.fillTriangle(14, potTop, W - 8, H, 8, H);
+    // Pot lip
+    g.fillStyle(0x5c3a1a, 1);
+    g.fillRect(8, potTop - 4, W - 16, 6);
+    // Foliage (layered green silhouettes)
+    g.fillStyle(0x1e3f2a, 1); // deepest layer
+    g.fillEllipse(W / 2, potTop - 20, W - 4, 64);
+    g.fillStyle(0x2e5a3a, 1);
+    g.fillEllipse(W / 2 - 12, potTop - 32, 50, 50);
+    g.fillEllipse(W / 2 + 12, potTop - 26, 48, 48);
+    g.fillEllipse(W / 2, potTop - 48, 56, 56);
+    // Highlights
+    g.fillStyle(0x4a8f4a, 1);
+    g.fillCircle(W / 2 - 10, potTop - 50, 6);
+    g.fillCircle(W / 2 + 18, potTop - 38, 5);
+    g.fillCircle(W / 2 - 18, potTop - 28, 5);
   }
 
   private drawColumn(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0xc4c4c4, 1);
-    g.fillRect(0, 0, 32, 200);
-    g.fillStyle(0xaaaaaa, 1);
-    g.fillRect(2, 0, 4, 200);
-    g.fillStyle(0xdddddd, 1);
-    g.fillRect(26, 0, 4, 200);
-    g.fillStyle(0x999999, 1);
-    g.fillRect(0, 0, 32, 6);
-    g.fillRect(0, 194, 32, 6);
+    // 60 x 380 — tall marble column, simple gradient + capital + base.
+    const W = 60, H = 380;
+    // Shaft body
+    g.fillStyle(0xeaeaee, 1);
+    g.fillRect(0, 0, W, H);
+    // Subtle vertical shading (right side darker)
+    g.fillStyle(0xd0d2d8, 1);
+    g.fillRect(W - 12, 0, 12, H);
+    // Left side highlight
+    g.fillStyle(0xf6f6f8, 1);
+    g.fillRect(0, 0, 6, H);
+    // Capital (top decorative)
+    g.fillStyle(0xc8cad0, 1);
+    g.fillRect(-4, 0, W + 8, 18);
+    g.fillStyle(0xeaeaee, 1);
+    g.fillRect(-4, 0, W + 8, 6);
+    // Base (bottom decorative)
+    g.fillStyle(0xc8cad0, 1);
+    g.fillRect(-4, H - 24, W + 8, 24);
+    g.fillStyle(0xa0a3aa, 1);
+    g.fillRect(-4, H - 8, W + 8, 8);
   }
 
   private drawWallMonitor(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(0, 0, 60, 36, 2);
-    g.fillStyle(0x4cc4ff, 0.85);
-    g.fillRoundedRect(3, 3, 54, 28, 2);
-    // Stock ticker
-    g.fillStyle(0xffe066, 1);
-    g.fillRect(6, 10, 30, 3);
-    g.fillStyle(0xff5252, 1);
-    g.fillRect(6, 18, 22, 3);
+    // 120 x 72 — flat screen displaying a stock-ticker chart.
+    const W = 120, H = 72;
+    // Wall mount shadow
+    g.fillStyle(0x1a1c22, 0.35);
+    g.fillRect(6, H - 6, W - 12, 4);
+    // Bezel
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(0, 0, W, H);
+    // Screen
+    g.fillStyle(0x103040, 1);
+    g.fillRect(6, 6, W - 12, H - 12);
+    // Stock chart line
     g.fillStyle(0x6abd5a, 1);
-    g.fillRect(6, 24, 36, 3);
+    g.fillRect(12, 38, 14, 3);
+    g.fillRect(26, 32, 14, 3);
+    g.fillRect(40, 36, 14, 3);
+    g.fillRect(54, 24, 14, 3);
+    g.fillRect(68, 28, 14, 3);
+    g.fillRect(82, 20, 14, 3);
+    g.fillRect(96, 16, 14, 3);
+    // Number readout
+    g.fillStyle(0xffe066, 1);
+    g.fillRect(12, 10, 36, 6);
+    g.fillStyle(0xc73a3a, 1);
+    g.fillRect(12, 52, 24, 4);
   }
 
   private drawLamppost(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(10, 0, 4, 180);
-    g.fillRect(6, 174, 12, 6);
+    // 30 x 260 — slim modern street lamp with a glowing head.
+    const W = 30, H = 260;
+    // Pole
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(W / 2 - 2, 24, 4, H - 24);
+    // Base
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(W / 2 - 8, H - 8, 16, 8);
+    // Lamp arm
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(W / 2 - 2, 18, 4, 8);
     // Lamp head
-    g.fillStyle(0x4a4a4a, 1);
-    g.fillRect(4, 0, 16, 8);
-    g.fillStyle(0xffe066, 0.85);
-    g.fillRect(6, 8, 12, 8);
+    g.fillStyle(0x2a2e38, 1);
+    g.fillRect(0, 6, W, 12);
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(0, 4, W, 4);
+    // Glow
+    g.fillStyle(0xf4d680, 0.95);
+    g.fillRect(4, 18, W - 8, 8);
+    // Halo
+    g.fillStyle(0xf4d680, 0.18);
+    g.fillCircle(W / 2, 24, 22);
   }
 
   private drawRevolvingDoor(g: Phaser.GameObjects.Graphics): void {
-    // Glass cylinder + vanes
-    g.fillStyle(0x1a2a3a, 0.4);
-    g.fillRoundedRect(4, 0, 72, 160, 4);
-    g.fillStyle(0xc4c4c4, 1);
-    g.fillRect(0, 0, 4, 160);
-    g.fillRect(76, 0, 4, 160);
-    g.fillRect(0, 0, 80, 4);
-    g.fillRect(0, 156, 80, 4);
-    // Vanes (X shape)
-    g.fillStyle(0x3a3d48, 1);
-    g.fillRect(38, 4, 4, 152);
-    g.fillRect(4, 78, 72, 4);
-    // Glass shimmer
-    g.fillStyle(0xffffff, 0.15);
-    g.fillRect(10, 4, 6, 70);
-    g.fillRect(60, 86, 6, 70);
+    // 140 x 280 — wider, taller, real glass-cylinder look.
+    const W = 140, H = 280;
+    // Frame
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(0, 0, W, H);
+    // Glass interior (cool tinted)
+    g.fillStyle(0x4a6b8b, 0.45);
+    g.fillRect(8, 8, W - 16, H - 16);
+    // Vanes (cross divider)
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(W / 2 - 3, 8, 6, H - 16);
+    g.fillRect(8, H / 2 - 3, W - 16, 6);
+    // Top + bottom trim (brushed metal)
+    g.fillStyle(0xa0a3ac, 1);
+    g.fillRect(0, 0, W, 8);
+    g.fillRect(0, H - 8, W, 8);
+    // Glass highlights
+    g.fillStyle(0xffffff, 0.18);
+    g.fillRect(14, 14, 8, H / 2 - 22);
+    g.fillRect(W / 2 + 8, H / 2 + 8, 8, H / 2 - 22);
+  }
+
+  private drawCeilingLight(g: Phaser.GameObjects.Graphics): void {
+    // 80 x 16 — recessed ceiling fixture casting a warm glow.
+    const W = 80, H = 16;
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xfaf0c8, 1);
+    g.fillRect(4, 4, W - 8, H - 8);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillRect(8, 6, W - 16, 2);
   }
 
   // ---------- Backgrounds ----------
   private drawSkyGradient(g: Phaser.GameObjects.Graphics): void {
-    // Vertical gradient from deep blue to warm horizon
-    const steps = 24;
+    // Dusk gradient — deep navy at top, warm horizon at bottom.
+    const steps = 36;
+    const top = [0x16, 0x1f, 0x33]; // deep navy
+    const mid = [0x3a, 0x4a, 0x6a];
+    const bot = [0x7b, 0x6a, 0x5a]; // warm violet-rust horizon
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
-      const r = Math.round(20 + t * 90);
-      const gn = Math.round(28 + t * 60);
-      const b = Math.round(72 + t * 30);
-      const color = (r << 16) | (gn << 8) | b;
-      g.fillStyle(color, 1);
-      g.fillRect(0, Math.floor((i * 360) / steps), 64, Math.ceil(360 / steps) + 1);
+      let r: number, gn: number, b: number;
+      if (t < 0.5) {
+        const k = t * 2;
+        r = Math.round(top[0] + (mid[0] - top[0]) * k);
+        gn = Math.round(top[1] + (mid[1] - top[1]) * k);
+        b = Math.round(top[2] + (mid[2] - top[2]) * k);
+      } else {
+        const k = (t - 0.5) * 2;
+        r = Math.round(mid[0] + (bot[0] - mid[0]) * k);
+        gn = Math.round(mid[1] + (bot[1] - mid[1]) * k);
+        b = Math.round(mid[2] + (bot[2] - mid[2]) * k);
+      }
+      g.fillStyle((r << 16) | (gn << 8) | b, 1);
+      g.fillRect(0, Math.floor((i * 400) / steps), 64, Math.ceil(400 / steps) + 1);
     }
   }
 
@@ -573,68 +675,84 @@ export class BootScene extends Phaser.Scene {
     g: Phaser.GameObjects.Graphics,
     layer: "back" | "front"
   ): void {
-    const width = 800;
-    const baseY = layer === "back" ? 200 : 240;
-    g.fillStyle(layer === "back" ? 0x1a2238 : 0x0c1320, 1);
-    // Building silhouettes
+    // Cleaner silhouettes — fewer buildings, more atmospheric.
+    const W = 1000;
+    const baseY = layer === "back" ? 240 : 300;
+    const baseColor = layer === "back" ? 0x202a44 : 0x0e1424;
+    const lightAlpha = layer === "back" ? 0.45 : 0.9;
+    g.fillStyle(baseColor, 1);
     let x = 0;
-    while (x < width) {
-      const w = Phaser.Math.Between(40, 80);
-      const h = Phaser.Math.Between(layer === "back" ? 60 : 100, layer === "back" ? 160 : 220);
+    while (x < W) {
+      const w = Phaser.Math.Between(layer === "back" ? 70 : 90, layer === "back" ? 130 : 170);
+      const h = Phaser.Math.Between(layer === "back" ? 90 : 140, layer === "back" ? 200 : 280);
+      g.fillStyle(baseColor, 1);
       g.fillRect(x, baseY - h, w, h);
-      // Window lights
-      g.fillStyle(0xffe066, layer === "back" ? 0.5 : 0.8);
-      for (let wx = x + 4; wx < x + w - 4; wx += 6) {
-        for (let wy = baseY - h + 6; wy < baseY - 6; wy += 8) {
-          if (Math.random() > 0.55) g.fillRect(wx, wy, 2, 3);
+      // Building top accent (antenna or setback)
+      if (Math.random() > 0.6) {
+        const aW = Phaser.Math.Between(8, 18);
+        const aH = Phaser.Math.Between(12, 28);
+        g.fillRect(x + w / 2 - aW / 2, baseY - h - aH, aW, aH);
+      }
+      // Window lights — denser but smaller
+      g.fillStyle(0xf2d680, lightAlpha);
+      const wCols = Math.floor((w - 14) / 8);
+      const wRows = Math.floor((h - 14) / 12);
+      for (let cx = 0; cx < wCols; cx++) {
+        for (let cy = 0; cy < wRows; cy++) {
+          if (Math.random() > 0.55) {
+            g.fillRect(x + 7 + cx * 8, baseY - h + 8 + cy * 12, 3, 4);
+          }
         }
       }
-      g.fillStyle(layer === "back" ? 0x1a2238 : 0x0c1320, 1);
-      x += w + Phaser.Math.Between(2, 8);
+      x += w + Phaser.Math.Between(0, 6);
     }
   }
 
   private drawPavement(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0x3a3d48, 1);
-    g.fillRect(0, 0, 64, 32);
-    g.fillStyle(0x2a2d38, 1);
-    g.fillRect(0, 0, 64, 2);
-    g.lineStyle(1, 0x4a4d58, 0.5);
-    g.lineBetween(0, 16, 64, 16);
-    g.lineBetween(32, 0, 32, 32);
-    // Speckle
-    g.fillStyle(0x5a5d68, 0.4);
-    for (let i = 0; i < 8; i++) {
-      g.fillRect(Phaser.Math.Between(0, 60), Phaser.Math.Between(4, 30), 2, 2);
-    }
+    // 96 x 48 — dark concrete sidewalk panels.
+    const W = 96, H = 48;
+    g.fillStyle(0x2d2f38, 1);
+    g.fillRect(0, 0, W, H);
+    // Panel divisions
+    g.fillStyle(0x1f2128, 1);
+    g.fillRect(0, 0, W, 2);
+    g.fillRect(W / 2 - 1, 0, 2, H);
+    // Subtle highlight along top edge of each panel
+    g.fillStyle(0x40434c, 0.5);
+    g.fillRect(2, 2, W / 2 - 4, 2);
+    g.fillRect(W / 2 + 2, 2, W / 2 - 4, 2);
   }
 
   private drawMarble(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0xd4d6dc, 1);
-    g.fillRect(0, 0, 64, 32);
-    g.fillStyle(0xc0c2c8, 1);
-    g.fillRect(0, 0, 64, 2);
-    // Marble veining
-    g.lineStyle(1, 0xb0b3ba, 0.6);
-    g.lineBetween(4, 8, 18, 14);
-    g.lineBetween(30, 18, 48, 26);
-    g.lineStyle(1, 0xa0a3aa, 0.4);
-    g.lineBetween(20, 4, 36, 10);
-    g.lineBetween(50, 20, 60, 30);
-    // Subtle tile seam
-    g.lineStyle(1, 0xb0b3ba, 0.7);
-    g.lineBetween(32, 0, 32, 32);
+    // 96 x 48 — large polished marble tiles.
+    const W = 96, H = 48;
+    g.fillStyle(0xc5c9d2, 1);
+    g.fillRect(0, 0, W, H);
+    // Top sheen
+    g.fillStyle(0xdde0e8, 1);
+    g.fillRect(0, 0, W, 4);
+    // Tile seams
+    g.fillStyle(0x9ca0aa, 1);
+    g.fillRect(0, 0, W, 1);
+    g.fillRect(W / 2 - 1, 0, 1, H);
+    // Subtle vein (one per tile)
+    g.fillStyle(0x9ca0aa, 0.4);
+    g.fillRect(12, 18, 24, 1);
+    g.fillRect(W / 2 + 18, 30, 28, 1);
   }
 
   private drawLobbyWall(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0xe8d8b8, 1);
-    g.fillRect(0, 0, 64, 64);
-    g.lineStyle(1, 0xc8b890, 0.5);
-    g.lineBetween(0, 32, 64, 32);
-    g.lineBetween(32, 0, 32, 64);
-    // Faint wallpaper pattern
-    g.fillStyle(0xd8c898, 0.4);
-    g.fillCircle(16, 16, 4);
-    g.fillCircle(48, 48, 4);
+    // 96 x 96 — clean warm cream wall, almost flat.
+    const W = 96, H = 96;
+    g.fillStyle(0xe8d0ac, 1);
+    g.fillRect(0, 0, W, H);
+    // Subtle wash (warmer near bottom)
+    g.fillStyle(0xd9bf95, 0.4);
+    g.fillRect(0, H / 2, W, H / 2);
+    // Wainscoting trim line
+    g.fillStyle(0x6e4f2c, 1);
+    g.fillRect(0, H - 8, W, 4);
+    g.fillStyle(0x8a6438, 1);
+    g.fillRect(0, H - 4, W, 4);
   }
 }

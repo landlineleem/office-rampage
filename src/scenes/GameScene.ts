@@ -234,32 +234,9 @@ export class GameScene extends Phaser.Scene {
     const wallStart = lvl.exteriorEndX;
     const wallW = lvl.width - wallStart;
 
-    if (this.textures.exists("lobby_background")) {
-      const tex = this.textures.get("lobby_background");
-      const srcW = tex.source[0].width;
-      const srcH = tex.source[0].height;
-      // The image is roughly 75% wall / 25% marble floor. We want the
-      // wall portion to span from ceiling (~y=160) to the ground line
-      // (y=540) — that's 380px tall. Image height to fit = 380 / 0.75.
-      const wallPortion = 0.75;
-      const targetWallHeight = lvl.groundY - 160;
-      const displayH = targetWallHeight / wallPortion;
-      const scale = displayH / srcH;
-      void srcW; // texture width drives tile repeat naturally via tileScale
-
-      // Image's wall/floor boundary should sit at groundY, so image top is
-      // at groundY - wall height = groundY - targetWallHeight.
-      const top = lvl.groundY - targetWallHeight;
-      const lobbyBg = this.add.tileSprite(wallStart, top, wallW, displayH, "lobby_background");
-      lobbyBg.setOrigin(0, 0);
-      lobbyBg.setTileScale(scale, scale);
-      lobbyBg.setScrollFactor(0.8);
-      lobbyBg.setDepth(1);
-    } else {
-      const lobbyWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, "lobby_wall");
-      lobbyWall.setOrigin(0, 0);
-      lobbyWall.setScrollFactor(0.7);
-    }
+    const lobbyWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, "lobby_wall");
+    lobbyWall.setOrigin(0, 0);
+    lobbyWall.setScrollFactor(0.85);
   }
 
   private buildGroundAndFloor(lvl: LevelData): void {
@@ -298,26 +275,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildExteriorDecor(lvl: LevelData): void {
-    // Lampposts on the sidewalk — bottom anchored to ground
-    this.add.image(180, lvl.groundY, "lamppost").setOrigin(0.5, 1);
-    this.add.image(550, lvl.groundY, "lamppost").setOrigin(0.5, 1);
-    // Revolving door at the building entrance (visual only — player walks past)
-    this.add.image(lvl.exteriorEndX - 50, lvl.groundY, "revolving_door").setOrigin(0.5, 1);
+    // Lampposts spaced along the sidewalk.
+    [200, 480, 720].forEach((x) =>
+      this.add.image(x, lvl.groundY, "lamppost").setOrigin(0.5, 1)
+    );
+    // Revolving door at the building entrance (visual — player walks past).
+    this.add.image(lvl.exteriorEndX - 70, lvl.groundY, "revolving_door").setOrigin(0.5, 1);
   }
 
   private buildInteriorDecor(lvl: LevelData): void {
-    // Columns, wall monitors, and floor plants are now baked into the AI
-    // lobby_background image. Only run the procedural decor when the
-    // background image isn't loaded (early-dev fallback).
-    if (this.textures.exists("lobby_background")) return;
-
-    const colXs = [950, 1450, 2050, 2550];
+    // Tall marble columns at decorative rhythm across the lobby.
+    const colXs = [1100, 1750, 2400, 3050];
     for (const x of colXs) {
       this.add.image(x, lvl.groundY, "column").setOrigin(0.5, 1);
     }
-    this.add.image(1380, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
-    this.add.image(1480, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
-    [880, 1620, 2200, 2860].forEach((x) =>
+    // Wall monitors mounted high on the back wall.
+    this.add.image(1380, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
+    this.add.image(1600, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
+    this.add.image(2700, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
+    // Recessed ceiling lights running along the top.
+    for (let x = lvl.exteriorEndX + 80; x < lvl.width - 80; x += 220) {
+      this.add.image(x, 24, "ceiling_light").setOrigin(0.5, 0);
+    }
+    // Floor plants — bigger silhouettes, fewer of them so they read clean.
+    [1000, 1980, 2650, 3300].forEach((x) =>
       this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
     );
   }
