@@ -88,8 +88,10 @@ export class BootScene extends Phaser.Scene {
     // Custom mouse crosshair
     this.makeTexture("crosshair", 36, 36, (g) => this.drawCrosshair(g));
 
-    // Weapon pickup icon
+    // Weapon pickup icons
     this.makeTexture("auto_stapler_pickup", 56, 32, (g) => this.drawAutoStaplerPickup(g));
+    this.makeTexture("hole_punch_pickup", 56, 32, (g) => this.drawHolePunchPickup(g));
+    this.makeTexture("swingline_pickup", 56, 32, (g) => this.drawSwinglinePickup(g));
 
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
@@ -120,6 +122,22 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("water_cooler_2", 60, 130, (g) => this.drawWaterCooler(g));
     this.makeTexture("server_rack", 84, 200, (g) => this.drawServerRack(g));
     this.makeTexture("office_door", 60, 140, (g) => this.drawOfficeDoor(g));
+    // New themes
+    this.makeTexture("boardroom_wall", 96, 96, (g) => this.drawBoardroomWall(g));
+    this.makeTexture("hardwood_tile", 96, 48, (g) => this.drawHardwoodTile(g));
+    this.makeTexture("leather_chair", 64, 110, (g) => this.drawLeatherChair(g));
+    this.makeTexture("chandelier", 120, 80, (g) => this.drawChandelier(g));
+    this.makeTexture("breakroom_wall", 96, 96, (g) => this.drawBreakroomWall(g));
+    this.makeTexture("white_tile", 96, 48, (g) => this.drawWhiteTile(g));
+    this.makeTexture("vending_machine", 70, 160, (g) => this.drawVendingMachine(g));
+    this.makeTexture("fridge", 80, 180, (g) => this.drawFridge(g));
+    this.makeTexture("server_wall", 96, 96, (g) => this.drawServerWall(g));
+    this.makeTexture("grate_tile", 96, 48, (g) => this.drawGrateTile(g));
+    this.makeTexture("hallway_wall", 96, 96, (g) => this.drawHallwayWall(g));
+    this.makeTexture("hallway_carpet", 96, 48, (g) => this.drawHallwayCarpet(g));
+    this.makeTexture("penthouse_wall", 96, 96, (g) => this.drawPenthouseWall(g));
+    this.makeTexture("polished_marble", 96, 48, (g) => this.drawPolishedMarble(g));
+    this.makeTexture("executive_chair", 70, 130, (g) => this.drawExecutiveChair(g));
 
     this.scene.start("Menu");
   }
@@ -514,6 +532,59 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0x12141b, 1);
     g.strokeRoundedRect(4, 14, W - 8, 12, 3);
     g.strokeRoundedRect(8, 6, W - 16, 10, 2);
+  }
+
+  private drawHolePunchPickup(g: Phaser.GameObjects.Graphics): void {
+    // 56 x 32 — chunky orange 3-hole punch icon
+    const W = 56;
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(W / 2, 28, 40, 6);
+    // Base
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRoundedRect(2, 16, W - 4, 12, 3);
+    // Upper deck
+    g.fillStyle(0xff8030, 1);
+    g.fillRoundedRect(6, 4, W - 12, 14, 3);
+    g.fillStyle(0xb84818, 1);
+    g.fillRect(6, 14, W - 12, 4);
+    // 3 holes / cutouts
+    for (let i = 0; i < 3; i++) {
+      g.fillStyle(0x14171f, 1);
+      g.fillCircle(16 + i * 12, 11, 3);
+    }
+    // Push button on right
+    g.fillStyle(0xc73a3a, 1);
+    g.fillRect(W - 12, 2, 6, 6);
+    g.lineStyle(1, 0x12141b, 1);
+    g.strokeRoundedRect(2, 16, W - 4, 12, 3);
+    g.strokeRoundedRect(6, 4, W - 12, 14, 3);
+  }
+
+  private drawSwinglinePickup(g: Phaser.GameObjects.Graphics): void {
+    // 56 x 32 — bright red premium Swingline-style stapler
+    const W = 56;
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(W / 2, 28, 40, 6);
+    // Lower body — bright red
+    g.fillStyle(0xff2020, 1);
+    g.fillRoundedRect(4, 14, W - 8, 14, 4);
+    g.fillStyle(0xc01010, 1);
+    g.fillRect(4, 22, W - 8, 6);
+    // Upper jaw — chrome
+    g.fillStyle(0xe0e4e8, 1);
+    g.fillRoundedRect(8, 4, W - 16, 12, 3);
+    g.fillStyle(0xc0c4c8, 1);
+    g.fillRect(8, 12, W - 16, 4);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillRect(8, 4, W - 16, 2);
+    // Hinge — gold
+    g.fillStyle(0xe8b33a, 1);
+    g.fillCircle(W - 14, 11, 4);
+    g.fillStyle(0xfae278, 1);
+    g.fillCircle(W - 15, 10, 1.5);
+    g.lineStyle(1, 0x12141b, 1);
+    g.strokeRoundedRect(4, 14, W - 8, 14, 4);
+    g.strokeRoundedRect(8, 4, W - 16, 12, 3);
   }
 
   private drawCrosshair(g: Phaser.GameObjects.Graphics): void {
@@ -1141,5 +1212,306 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0x3a3f4c, 1);
       g.fillRect(W - 24, y + 4, 14, 12);
     }
+  }
+
+  // ---------- New theme art ----------
+
+  private drawBoardroomWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — dark walnut wood paneling with brass trim
+    const W = 96, H = 96;
+    g.fillStyle(0x3a2412, 1);
+    g.fillRect(0, 0, W, H);
+    // Vertical panel divisions
+    g.fillStyle(0x281708, 1);
+    for (let x = 0; x < W; x += 24) g.fillRect(x, 0, 2, H);
+    // Subtle wood grain
+    g.fillStyle(0x4a2e1a, 0.6);
+    for (let y = 6; y < H; y += 12) g.fillRect(0, y, W, 1);
+    // Brass trim at the top
+    g.fillStyle(0xc59842, 1);
+    g.fillRect(0, 0, W, 4);
+    g.fillStyle(0xe8b33a, 1);
+    g.fillRect(0, 0, W, 1);
+    // Brass wainscoting line
+    g.fillStyle(0xc59842, 1);
+    g.fillRect(0, H - 14, W, 2);
+  }
+
+  private drawHardwoodTile(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — herringbone-ish hardwood planks
+    const W = 96, H = 48;
+    g.fillStyle(0x5a3818, 1);
+    g.fillRect(0, 0, W, H);
+    // Plank lines
+    g.fillStyle(0x3a2412, 1);
+    g.fillRect(0, 0, W, 2);
+    g.fillRect(0, H / 2, W, 1);
+    g.fillRect(W / 2, 0, 1, H);
+    // Grain
+    g.fillStyle(0x6e4828, 0.6);
+    for (let y = 4; y < H; y += 6) g.fillRect(2, y, W - 4, 1);
+    // Sheen
+    g.fillStyle(0xffffff, 0.06);
+    g.fillRect(0, 0, W, 4);
+  }
+
+  private drawLeatherChair(g: Phaser.GameObjects.Graphics): void {
+    // 64 x 110 — high-back leather executive chair (side view)
+    const W = 64, H = 110;
+    // Wheel base
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(8, H - 10, W - 16, 4);
+    g.fillCircle(12, H - 4, 4);
+    g.fillCircle(W - 12, H - 4, 4);
+    // Hydraulic pole
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(W / 2 - 3, H - 60, 6, 50);
+    // Seat
+    g.fillStyle(0x2a1812, 1);
+    g.fillRect(8, H - 70, W - 16, 18);
+    g.fillStyle(0x3a2218, 1);
+    g.fillRect(8, H - 70, W - 16, 4);
+    // Tall backrest
+    g.fillStyle(0x2a1812, 1);
+    g.fillRect(W - 22, H - 105, 14, 50);
+    g.fillStyle(0x3a2218, 1);
+    g.fillRect(W - 22, H - 105, 14, 8);
+    // Armrest
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(8, H - 75, 12, 22);
+  }
+
+  private drawChandelier(g: Phaser.GameObjects.Graphics): void {
+    // 120 x 80 — crystal chandelier hanging from the ceiling
+    const W = 120;
+    // Hanging chain
+    g.fillStyle(0x3a2412, 1);
+    g.fillRect(W / 2 - 1, 0, 2, 14);
+    // Brass ring frame
+    g.fillStyle(0xc59842, 1);
+    g.fillEllipse(W / 2, 30, W - 20, 16);
+    g.fillStyle(0xe8b33a, 1);
+    g.fillEllipse(W / 2, 28, W - 30, 10);
+    // Crystals hanging
+    for (let i = 0; i < 7; i++) {
+      const x = 14 + i * 14;
+      g.fillStyle(0xb8d4e0, 0.85);
+      g.fillTriangle(x - 3, 32, x + 3, 32, x, 56);
+      g.fillStyle(0xe8f4f8, 0.6);
+      g.fillRect(x - 1, 34, 2, 18);
+    }
+    // Glow
+    g.fillStyle(0xffe066, 0.4);
+    g.fillEllipse(W / 2, 60, W, 24);
+  }
+
+  private drawBreakroomWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — white subway tile wall
+    const W = 96, H = 96;
+    g.fillStyle(0xf2f1eb, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xd4d2c4, 1);
+    // Horizontal grout lines
+    for (let y = 0; y < H; y += 16) g.fillRect(0, y, W, 1);
+    // Offset vertical grout (subway pattern)
+    for (let y = 0; y < H; y += 16) {
+      const offset = (y / 16) % 2 === 0 ? 0 : 16;
+      for (let x = offset; x < W; x += 32) g.fillRect(x, y, 1, 16);
+    }
+    // Floor trim
+    g.fillStyle(0xa9a797, 1);
+    g.fillRect(0, H - 6, W, 6);
+  }
+
+  private drawWhiteTile(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — clean white cafeteria tile
+    const W = 96, H = 48;
+    g.fillStyle(0xeae8d8, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xc0bda8, 1);
+    g.fillRect(0, 0, W, 2);
+    g.fillRect(W / 2 - 1, 0, 2, H);
+    g.fillStyle(0xfaf8eb, 1);
+    g.fillRect(2, 4, W / 2 - 4, 4);
+    g.fillRect(W / 2 + 2, 4, W / 2 - 4, 4);
+  }
+
+  private drawVendingMachine(g: Phaser.GameObjects.Graphics): void {
+    // 70 x 160 — red vending machine with snack rows
+    const W = 70, H = 160;
+    g.fillStyle(0x1a1d24, 1);
+    g.fillRect(0, 0, W, H);
+    // Body
+    g.fillStyle(0xc73a3a, 1);
+    g.fillRect(4, 4, W - 8, H - 16);
+    // Big glass window
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(8, 8, W - 16, H - 50);
+    // Snack rows
+    g.fillStyle(0xc8a050, 1);
+    for (let y = 14; y < H - 50; y += 12) {
+      g.fillRect(12, y, W - 24, 8);
+    }
+    // Coin slot + keypad
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(12, H - 42, W - 24, 26);
+    g.fillStyle(0xffe066, 1);
+    g.fillRect(W / 2 - 6, H - 30, 12, 4);
+    // Logo
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(W / 2 - 12, H - 60, 24, 6);
+    // Base
+    g.fillStyle(0x1a1d24, 1);
+    g.fillRect(0, H - 12, W, 12);
+  }
+
+  private drawFridge(g: Phaser.GameObjects.Graphics): void {
+    // 80 x 180 — stainless steel office fridge
+    const W = 80, H = 180;
+    g.fillStyle(0x9aa0a8, 1);
+    g.fillRect(0, 0, W, H);
+    // Vertical brushed lines
+    g.fillStyle(0x8a9098, 0.5);
+    for (let x = 4; x < W; x += 8) g.fillRect(x, 0, 1, H);
+    // Top compartment
+    g.fillStyle(0x6a7078, 1);
+    g.fillRect(0, 0, W, 60);
+    // Compartment divider
+    g.fillStyle(0x4a5058, 1);
+    g.fillRect(0, 60, W, 4);
+    // Handle (right side)
+    g.fillStyle(0xc8ccd0, 1);
+    g.fillRect(W - 10, 14, 4, 34);
+    g.fillRect(W - 10, 80, 4, 86);
+    // Ice/water dispenser
+    g.fillStyle(0x2a2d36, 1);
+    g.fillRect(8, 86, 24, 24);
+    g.fillStyle(0x88c8ff, 1);
+    g.fillCircle(20, 100, 2);
+    // Logo + magnets
+    g.fillStyle(0xc73a3a, 1);
+    g.fillRect(14, 130, 12, 12);
+    g.fillStyle(0xffe066, 1);
+    g.fillRect(30, 130, 12, 12);
+  }
+
+  private drawServerWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — dark industrial wall with horizontal cable trays
+    const W = 96, H = 96;
+    g.fillStyle(0x1c1f28, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0x12141b, 1);
+    g.fillRect(0, 0, W, H / 2);
+    // Cable tray rails
+    g.fillStyle(0x3a3f4c, 1);
+    g.fillRect(0, 30, W, 4);
+    g.fillRect(0, 50, W, 4);
+    g.fillRect(0, 70, W, 4);
+    // Multicolored cables
+    const cableColors = [0xc73a3a, 0xffe066, 0x88c8ff, 0x6abd5a];
+    for (let i = 0; i < cableColors.length; i++) {
+      g.fillStyle(cableColors[i], 1);
+      g.fillRect(0, 31 + (i % 3) * 20, W, 1);
+    }
+    // Vertical mounting strut
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(W / 2 - 2, 0, 4, H);
+  }
+
+  private drawGrateTile(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — industrial steel grate with diagonal pattern
+    const W = 96, H = 48;
+    g.fillStyle(0x2a2d36, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0x4a4d58, 1);
+    for (let y = 0; y < H; y += 6) g.fillRect(0, y, W, 1);
+    for (let x = 0; x < W; x += 6) g.fillRect(x, 0, 1, H);
+    // Diagonal sheen
+    g.fillStyle(0x6a6d76, 0.4);
+    for (let i = 0; i < 8; i++) {
+      g.fillRect(i * 12, 0, 1, H);
+    }
+  }
+
+  private drawHallwayWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — pale corridor wall with horizontal trim
+    const W = 96, H = 96;
+    g.fillStyle(0xe2dccc, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xc8c2b0, 0.5);
+    g.fillRect(0, H / 2, W, H / 2);
+    // Chair rail
+    g.fillStyle(0x6e5b3a, 1);
+    g.fillRect(0, H / 2 - 2, W, 4);
+    // Floor trim
+    g.fillStyle(0x4a3818, 1);
+    g.fillRect(0, H - 8, W, 8);
+  }
+
+  private drawHallwayCarpet(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — patterned hotel corridor carpet
+    const W = 96, H = 48;
+    g.fillStyle(0x6b2828, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0x4a1818, 1);
+    g.fillRect(0, 0, W, 2);
+    // Gold diamond pattern
+    g.fillStyle(0xc59842, 1);
+    g.fillRect(W / 2 - 1, 0, 2, H);
+    for (let x = 12; x < W; x += 24) {
+      g.fillStyle(0xc59842, 0.7);
+      g.fillRect(x, H / 2 - 2, 4, 4);
+    }
+  }
+
+  private drawPenthouseWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — luxury marble wall with gold inlay
+    const W = 96, H = 96;
+    g.fillStyle(0xeae6dc, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xcec8b9, 1);
+    for (let y = 0; y < H; y += 32) g.fillRect(0, y, W, 1);
+    // Marble veining
+    g.lineStyle(1, 0xa49d8c, 0.6);
+    g.lineBetween(0, 12, W, 18);
+    g.lineBetween(0, 60, W, 50);
+    // Gold inlay strips
+    g.fillStyle(0xc59842, 1);
+    g.fillRect(0, 30, W, 2);
+    g.fillRect(0, 64, W, 2);
+  }
+
+  private drawPolishedMarble(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — high-end polished marble with strong sheen
+    const W = 96, H = 48;
+    g.fillStyle(0xe8e8ec, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xc8c8cc, 1);
+    g.fillRect(W / 2 - 1, 0, 2, H);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillRect(0, 0, W, 6);
+    // Subtle veins
+    g.lineStyle(1, 0xa8a8b0, 0.4);
+    g.lineBetween(4, 12, 30, 20);
+    g.lineBetween(50, 28, 80, 36);
+  }
+
+  private drawExecutiveChair(g: Phaser.GameObjects.Graphics): void {
+    // 70 x 130 — even bigger leather throne for the CEO
+    const W = 70, H = 130;
+    g.fillStyle(0x14171f, 1);
+    g.fillRect(8, H - 10, W - 16, 4);
+    g.fillCircle(12, H - 4, 4);
+    g.fillCircle(W - 12, H - 4, 4);
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(W / 2 - 4, H - 70, 8, 60);
+    g.fillStyle(0x1a0e08, 1);
+    g.fillRect(8, H - 80, W - 16, 24);
+    g.fillStyle(0x2a1812, 1);
+    g.fillRect(8, H - 80, W - 16, 6);
+    g.fillStyle(0x1a0e08, 1);
+    g.fillRect(W - 24, H - 125, 16, 60);
+    g.fillStyle(0xc59842, 1);
+    g.fillRect(W - 22, H - 123, 12, 4); // gold trim
   }
 }

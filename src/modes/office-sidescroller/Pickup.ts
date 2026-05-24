@@ -1,6 +1,12 @@
 import Phaser from "phaser";
 
-export type PickupKind = "auto_stapler";
+export type PickupKind = "auto_stapler" | "hole_punch" | "swingline";
+
+const PICKUP_TEXTURE: Record<PickupKind, string> = {
+  auto_stapler: "auto_stapler_pickup",
+  hole_punch: "hole_punch_pickup",
+  swingline: "swingline_pickup",
+};
 
 // A weapon pickup that drops on the ground from a dead enemy. Bobs up
 // and down with a glowing halo, falls if airborne, persists until the
@@ -12,7 +18,7 @@ export class WeaponPickup extends Phaser.Physics.Arcade.Sprite {
   private label: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: PickupKind) {
-    super(scene, x, y, "auto_stapler_pickup");
+    super(scene, x, y, PICKUP_TEXTURE[kind]);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.kind = kind;

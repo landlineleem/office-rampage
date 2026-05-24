@@ -5,6 +5,9 @@ import {
   GuardGun,
   SINGLE_STAPLER,
   AUTO_STAPLER,
+  HOLE_PUNCH,
+  RED_SWINGLINE,
+  type WeaponConfig,
 } from "../modes/office-sidescroller/weapons";
 import {
   Enemy,
@@ -32,7 +35,9 @@ export class GameScene extends Phaser.Scene {
   private player!: SideScrollerPlayer;
   private weapons: PlayerWeapon[] = [];
   private currentWeapon = 0;
-  private hasAutoStapler = false;
+  // Set of unlocked weapon kinds the player has collected. Used to
+  // rebuild the weapons[] array on each level + to gate pickup drops.
+  private unlockedWeapons: Set<string> = new Set(["single"]);
   private guardGun!: GuardGun;
   private guards!: Phaser.Physics.Arcade.Group;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
@@ -74,13 +79,13 @@ export class GameScene extends Phaser.Scene {
     score?: number;
     kills?: number;
     bestCombo?: number;
-    hasAutoStapler?: boolean;
+    unlockedWeapons?: string[];
   }): void {
     this.levelIndex = data.levelIndex ?? 0;
     this.inheritedScore = data.score ?? 0;
     this.inheritedKills = data.kills ?? 0;
     this.inheritedBestCombo = data.bestCombo ?? 0;
-    this.hasAutoStapler = data.hasAutoStapler ?? false;
+    this.unlockedWeapons = new Set(data.unlockedWeapons ?? ["single"]);
   }
 
   create(): void {
@@ -119,12 +124,19 @@ export class GameScene extends Phaser.Scene {
     this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
 
-    // Weapons: single stapler is the default starter; auto stapler unlocks
-    // after picking up the drop from the last guard on Floor 1.
-    this.weapons = [new PlayerWeapon(this, SINGLE_STAPLER)];
-    if (this.hasAutoStapler) {
-      this.weapons.push(new PlayerWeapon(this, AUTO_STAPLER));
+    // Build weapons[] from the unlocked set so each new floor honors the
+    // player's accumulated arsenal.
+    this.weapons = [];
+    const slot: Array<[string, WeaponConfig]> = [
+      ["single", SINGLE_STAPLER],
+      ["auto", AUTO_STAPLER],
+      ["hole_punch", HOLE_PUNCH],
+      ["swingline", RED_SWINGLINE],
+    ];
+    for (const [kind, config] of slot) {
+      if (this.unlockedWeapons.has(kind)) this.weapons.push(new PlayerWeapon(this, config));
     }
+    if (this.weapons.length === 0) this.weapons.push(new PlayerWeapon(this, SINGLE_STAPLER));
     this.currentWeapon = 0;
     this.guardGun = new GuardGun(this);
 
@@ -252,9 +264,11 @@ export class GameScene extends Phaser.Scene {
 
     this.keys = this.input.keyboard!.addKeys("W,A,S,D,SPACE") as PlayerKeys;
     this.input.mouse?.disableContextMenu();
-    // Weapon hotswap keys 1 / 2
+    // Weapon hotswap keys 1-4
     this.input.keyboard?.on("keydown-ONE", () => this.selectWeapon(0));
     this.input.keyboard?.on("keydown-TWO", () => this.selectWeapon(1));
+    this.input.keyboard?.on("keydown-THREE", () => this.selectWeapon(2));
+    this.input.keyboard?.on("keydown-FOUR", () => this.selectWeapon(3));
 
     // Semi-auto trigger fires once per click (pointerdown). Full-auto
     // is handled by the held-button check in update().
@@ -332,16 +346,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private maybeDropAutoStaplerPickup(x: number, y: number): void {
-    // Only on Floor 1, only if the player doesn't already have it,
-    // only when this kill emptied the guard roster AND every door
-    // spawner has already done its thing (so we don't drop the
-    // pickup before the level is actually clearable).
-    if (this.levelIndex !== 0) return;
-    if (this.hasAutoStapler) return;
+    if (!this.level.rewardPickup) return;
+    const kind = this.level.rewardPickup.kind;
+    // Already unlocked? Skip.
+    const unlockKey =
+      kind === "auto_stapler" ? "auto" : kind === "hole_punch" ? "hole_punch" : "swingline";
+    if (this.unlockedWeapons.has(unlockKey)) return;
     if (this.guards.countActive(true) > 0) return;
     const allDoorsSpent = this.doorSpawners.every((ds) => ds.triggered);
     if (!allDoorsSpent) return;
-    const pickup = new WeaponPickup(this, x, y - 60, "auto_stapler");
+    const pickup = new WeaponPickup(this, x, y - 60, kind);
     this.pickups.add(pickup);
     this.hud.showBanner("WEAPON DROPPED", 1500);
   }
@@ -390,13 +404,33 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPickup(p: WeaponPickup): void {
-    if (p.kind === "auto_stapler") {
-      this.hasAutoStapler = true;
-      const auto = new PlayerWeapon(this, AUTO_STAPLER);
-      this.weapons.push(auto);
-      this.registerWeaponColliders(auto);
+    let unlockKey = "";
+    let config: WeaponConfig | null = null;
+    let label = "";
+    switch (p.kind) {
+      case "auto_stapler":
+        unlockKey = "auto";
+        config = AUTO_STAPLER;
+        label = "AUTO STAPLER";
+        break;
+      case "hole_punch":
+        unlockKey = "hole_punch";
+        config = HOLE_PUNCH;
+        label = "HOLE PUNCH";
+        break;
+      case "swingline":
+        unlockKey = "swingline";
+        config = RED_SWINGLINE;
+        label = "RED SWINGLINE";
+        break;
+    }
+    if (config && !this.unlockedWeapons.has(unlockKey)) {
+      this.unlockedWeapons.add(unlockKey);
+      const w = new PlayerWeapon(this, config);
+      this.weapons.push(w);
+      this.registerWeaponColliders(w);
       this.selectWeapon(this.weapons.length - 1);
-      this.hud.showBanner("AUTO STAPLER · press 1 / 2 to swap", 2200);
+      this.hud.showBanner(`${label} · press 1-${this.weapons.length} to swap`, 2400);
       sound.elevatorDing();
     }
     p.destroy();
@@ -539,7 +573,7 @@ export class GameScene extends Phaser.Scene {
     // Interior wall — texture varies by theme
     const wallStart = lvl.exteriorEndX;
     const wallW = lvl.width - wallStart;
-    const wallTexture = lvl.theme === "cubicles" ? "cubicle_wall" : "lobby_wall";
+    const wallTexture = this.wallTextureForTheme(lvl.theme);
     const interiorWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, wallTexture);
     interiorWall.setOrigin(0, 0);
     interiorWall.setScrollFactor(0.85);
@@ -552,6 +586,30 @@ export class GameScene extends Phaser.Scene {
           .setOrigin(0.5, 1)
           .setScrollFactor(0.92);
       }
+    }
+  }
+
+  private wallTextureForTheme(theme: LevelData["theme"]): string {
+    switch (theme) {
+      case "lobby": return "lobby_wall";
+      case "cubicles": return "cubicle_wall";
+      case "boardroom": return "boardroom_wall";
+      case "break_room": return "breakroom_wall";
+      case "server_room": return "server_wall";
+      case "hallway": return "hallway_wall";
+      case "penthouse": return "penthouse_wall";
+    }
+  }
+
+  private floorTextureForTheme(theme: LevelData["theme"]): string {
+    switch (theme) {
+      case "lobby": return "marble_tile";
+      case "cubicles": return "carpet_tile";
+      case "boardroom": return "hardwood_tile";
+      case "break_room": return "white_tile";
+      case "server_room": return "grate_tile";
+      case "hallway": return "hallway_carpet";
+      case "penthouse": return "polished_marble";
     }
   }
 
@@ -570,8 +628,8 @@ export class GameScene extends Phaser.Scene {
       pavement.setOrigin(0, 0);
     }
 
-    // Interior floor — marble for lobby, carpet for cubicles
-    const interiorTexture = lvl.theme === "cubicles" ? "carpet_tile" : "marble_tile";
+    // Interior floor — varies by theme
+    const interiorTexture = this.floorTextureForTheme(lvl.theme);
     const interior = this.add.tileSprite(
       lvl.exteriorEndX,
       lvl.groundY,
@@ -603,13 +661,78 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildInteriorDecor(lvl: LevelData): void {
-    if (lvl.theme === "lobby") this.buildLobbyDecor(lvl);
-    else this.buildCubiclesDecor(lvl);
-
-    // Ceiling lights — both themes get these
-    for (let x = lvl.exteriorEndX + 80; x < lvl.width - 80; x += 220) {
-      this.add.image(x, 24, "ceiling_light").setOrigin(0.5, 0);
+    switch (lvl.theme) {
+      case "lobby": this.buildLobbyDecor(lvl); break;
+      case "cubicles": this.buildCubiclesDecor(lvl); break;
+      case "boardroom": this.buildBoardroomDecor(lvl); break;
+      case "break_room": this.buildBreakroomDecor(lvl); break;
+      case "server_room": this.buildServerDecor(lvl); break;
+      case "hallway": this.buildHallwayDecor(lvl); break;
+      case "penthouse": this.buildPenthouseDecor(lvl); break;
     }
+
+    // Ceiling lights — all themes get these except hallway (which has its
+    // own narrower fluorescent strips baked into the lowObstacles)
+    if (lvl.theme !== "hallway") {
+      for (let x = lvl.exteriorEndX + 80; x < lvl.width - 80; x += 220) {
+        this.add.image(x, 24, "ceiling_light").setOrigin(0.5, 0);
+      }
+    }
+  }
+
+  private buildBoardroomDecor(lvl: LevelData): void {
+    // Leather chairs along the table at intervals
+    [950, 1250, 1550, 1850, 2150].forEach((x) =>
+      this.add.image(x, lvl.groundY, "leather_chair").setOrigin(0.5, 1).setDepth(6)
+    );
+    // Chandelier centered over the boardroom
+    this.add.image(1400, 80, "chandelier").setOrigin(0.5, 0);
+    this.add.image(2400, 80, "chandelier").setOrigin(0.5, 0);
+    // Floor plants in corners
+    [300, lvl.width - 300].forEach((x) =>
+      this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
+    );
+  }
+
+  private buildBreakroomDecor(lvl: LevelData): void {
+    // Vending machine + fridge cluster at one wall section
+    this.add.image(450, lvl.groundY, "vending_machine").setOrigin(0.5, 1).setScrollFactor(0.95);
+    this.add.image(530, lvl.groundY, "fridge").setOrigin(0.5, 1).setScrollFactor(0.95);
+    this.add.image(3500, lvl.groundY, "vending_machine").setOrigin(0.5, 1).setScrollFactor(0.95);
+    this.add.image(3580, lvl.groundY, "fridge").setOrigin(0.5, 1).setScrollFactor(0.95);
+    // Water coolers + plants for break-area feel
+    [1300, 3000].forEach((x) =>
+      this.add.image(x, lvl.groundY, "water_cooler_2").setOrigin(0.5, 1)
+    );
+    [200, 1700, 2400, lvl.width - 200].forEach((x) =>
+      this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
+    );
+  }
+
+  private buildServerDecor(lvl: LevelData): void {
+    // Floor server racks along the wall (closer than the level platforms)
+    [350, 850, 1350, 1850, 2350, 2850, 3350, 3850].forEach((x) =>
+      this.add.image(x, lvl.groundY, "server_rack").setOrigin(0.5, 1).setScrollFactor(0.92)
+    );
+  }
+
+  private buildHallwayDecor(lvl: LevelData): void {
+    // Lots of identical numbered doors lining the hallway — visual only.
+    // The actual door spawners overlay on top of these positions.
+    for (let x = 300; x < lvl.width - 200; x += 200) {
+      this.add.image(x, lvl.groundY, "office_door").setOrigin(0.5, 1).setDepth(3);
+    }
+  }
+
+  private buildPenthouseDecor(lvl: LevelData): void {
+    // The CEO's executive chair behind the desk
+    this.add.image(2100, lvl.groundY, "executive_chair").setOrigin(0.5, 1).setDepth(6);
+    // A couple of floor plants framing the space
+    [200, lvl.width - 200].forEach((x) =>
+      this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
+    );
+    // Big chandelier
+    this.add.image(lvl.width / 2, 60, "chandelier").setOrigin(0.5, 0);
   }
 
   private buildLobbyDecor(lvl: LevelData): void {
@@ -796,7 +919,7 @@ export class GameScene extends Phaser.Scene {
             kills: this.combo.totalKills,
             best: this.combo.best,
             score: this.combo.score,
-            hasAutoStapler: this.hasAutoStapler,
+            unlockedWeapons: Array.from(this.unlockedWeapons),
           });
         },
       });
