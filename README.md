@@ -11,8 +11,8 @@ Built with **Phaser 4 + TypeScript + Vite**. Procedural art + AI-generated chara
 | Key | Action |
 |---|---|
 | **A / D** | Run left / right |
-| **W** | Jump |
-| **S** | Slide (combine with A / D for direction) |
+| **W** | Jump · press again mid-air for **double jump** |
+| **S** | Slide · you can **fire during slide** for the MFP combo |
 | **Mouse** | Aim |
 | **Left click** | Fire (auto weapons hold, semi weapons click each) |
 | **SPACE** | Slow-motion (drains caffeine) |
@@ -38,7 +38,7 @@ Built with **Phaser 4 + TypeScript + Vite**. Procedural art + AI-generated chara
 | **Heavy Guard** | 5 HP, slow, dark armor tint, heavier gun (30 dmg per bullet). |
 | **Sniper** | Stationary, red tint, glass-cannon. Long aim delay with a pulsing laser sight. One shot does 45 dmg from 1100px away. |
 | **Intern** | Pale, fast, no gun. Charges and slams into you on sight. 22 dmg per contact. |
-| **The CEO** | Boss. 60 HP, golden tint, 1.7x scale. Rapid burst fire. Blocks the elevator until defeated. |
+| **The CEO** | Boss. 60 HP, golden tint, 1.7x scale. Rapid burst fire. **Phase 2 at 50% HP** — fire rate doubles, bullet damage +5, tint goes deep red. Blocks the elevator until defeated. |
 
 ## Weapons
 
