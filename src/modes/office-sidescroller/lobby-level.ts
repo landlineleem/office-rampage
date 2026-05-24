@@ -1,4 +1,15 @@
-export type Platform = { x: number; y: number; width: number; height: number };
+export type Platform = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  // One-way platforms only block the player from above — jump up through
+  // them from below, land on top when falling. Bullets pass through.
+  oneWay?: boolean;
+  // Override the auto-picked texture (defaults to desk / file_cabinet by
+  // aspect ratio). Use for unusual platform shapes like mezzanine.
+  textureKey?: string;
+};
 
 export type LowObstacle = {
   x: number;

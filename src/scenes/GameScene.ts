@@ -41,6 +41,9 @@ export class GameScene extends Phaser.Scene {
   private guardGun!: GuardGun;
   private guards!: Phaser.Physics.Arcade.Group;
   private platforms!: Phaser.Physics.Arcade.StaticGroup;
+  // Separate group for one-way (jump-up-through) platforms so bullets
+  // can be configured to pass through them without affecting the rest.
+  private oneWayPlatforms!: Phaser.Physics.Arcade.StaticGroup;
   private lowObstacles!: Phaser.Physics.Arcade.StaticGroup;
   private elevator!: Phaser.Physics.Arcade.Sprite;
   private combo!: ComboSystem;
@@ -174,6 +177,13 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.guards, this.platforms);
     this.physics.add.collider(this.corpses, this.platforms);
     this.physics.add.collider(this.pickups, this.platforms);
+    // One-way platforms — same collider set but only block from above
+    // (configured via checkCollision in buildPlatforms). Bullets are
+    // intentionally NOT registered to pass through cleanly.
+    this.physics.add.collider(this.player, this.oneWayPlatforms);
+    this.physics.add.collider(this.guards, this.oneWayPlatforms);
+    this.physics.add.collider(this.corpses, this.oneWayPlatforms);
+    this.physics.add.collider(this.pickups, this.oneWayPlatforms);
     // Low obstacles ONLY collide with the player when they're NOT sliding
     this.physics.add.collider(
       this.player,
@@ -818,6 +828,7 @@ export class GameScene extends Phaser.Scene {
 
   private buildGroundAndFloor(lvl: LevelData): void {
     this.platforms = this.physics.add.staticGroup();
+    this.oneWayPlatforms = this.physics.add.staticGroup();
 
     // Exterior pavement (only if level has an outdoor section)
     if (lvl.exteriorEndX > 0) {
@@ -974,17 +985,36 @@ export class GameScene extends Phaser.Scene {
 
   private buildPlatforms(lvl: LevelData): void {
     for (const p of lvl.platforms) {
-      // Pick a texture by silhouette: tall-and-narrow = file cabinet, otherwise
-      // a reception desk. Position is the platform's *center*, which is below
-      // the walkable surface (p.y) by half-height.
-      const textureKey = p.height > p.width ? "file_cabinet" : "desk";
+      // Pick a texture: explicit override → use it, else silhouette
+      // heuristic (tall-and-narrow = file_cabinet, otherwise desk).
+      const textureKey =
+        p.textureKey ?? (p.height > p.width ? "file_cabinet" : "desk");
       const cy = p.y + p.height / 2;
-      this.add.image(p.x, cy, textureKey).setOrigin(0.5, 0.5);
+      // For tileable wide platforms (mezzanine), use a TileSprite so the
+      // texture repeats. For everything else, a single sprite.
+      if (p.textureKey === "mezzanine") {
+        const ts = this.add.tileSprite(p.x, cy, p.width, p.height, textureKey);
+        ts.setOrigin(0.5, 0.5);
+      } else {
+        this.add.image(p.x, cy, textureKey).setOrigin(0.5, 0.5);
+      }
       const collider = this.add
         .rectangle(p.x, cy, p.width, p.height, 0x000000, 0)
         .setOrigin(0.5, 0.5);
       this.physics.add.existing(collider, true);
-      this.platforms.add(collider);
+      // One-way platforms: only block from above. Players + enemies jump
+      // UP through them from below; falling onto them lands normally.
+      // Bullets always pass through (we never register a bullet-vs-this
+      // collider for the one-way group, see below).
+      if (p.oneWay) {
+        const body = collider.body as Phaser.Physics.Arcade.StaticBody;
+        body.checkCollision.down = false;
+        body.checkCollision.left = false;
+        body.checkCollision.right = false;
+        this.oneWayPlatforms.add(collider);
+      } else {
+        this.platforms.add(collider);
+      }
     }
   }
 

@@ -125,6 +125,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("water_cooler_2", 60, 130, (g) => this.drawWaterCooler(g));
     this.makeTexture("server_rack", 84, 200, (g) => this.drawServerRack(g));
     this.makeTexture("office_door", 64, 184, (g) => this.drawOfficeDoor(g));
+    this.makeTexture("mezzanine", 280, 24, (g) => this.drawMezzanine(g));
     // New themes
     this.makeTexture("boardroom_wall", 96, 96, (g) => this.drawBoardroomWall(g));
     this.makeTexture("hardwood_tile", 96, 48, (g) => this.drawHardwoodTile(g));
@@ -1171,6 +1172,31 @@ export class BootScene extends Phaser.Scene {
     // Drip tray
     g.fillStyle(0x1f232c, 1);
     g.fillRect(W / 2 - 12, 96, 24, 6);
+  }
+
+  private drawMezzanine(g: Phaser.GameObjects.Graphics): void {
+    // 280 x 24 — industrial steel mezzanine catwalk, tileable horizontally
+    const W = 280;
+    // Base steel
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(0, 8, W, 12);
+    // Top walking surface (lighter)
+    g.fillStyle(0x6a6d76, 1);
+    g.fillRect(0, 8, W, 3);
+    // Top safety lip
+    g.fillStyle(0xe8b33a, 1);
+    g.fillRect(0, 6, W, 2);
+    // Underside support brackets
+    g.fillStyle(0x2a2d36, 1);
+    g.fillRect(0, 20, W, 4);
+    for (let x = 0; x < W; x += 40) {
+      g.fillRect(x + 18, 20, 4, 4);
+    }
+    // Rivets along the top
+    g.fillStyle(0x1f232c, 1);
+    for (let x = 4; x < W; x += 12) {
+      g.fillCircle(x, 11, 1.2);
+    }
   }
 
   private drawOfficeDoor(g: Phaser.GameObjects.Graphics): void {
