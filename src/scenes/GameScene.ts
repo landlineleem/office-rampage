@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { SideScrollerPlayer, type PlayerKeys } from "../core/SideScrollerPlayer";
 import { Pistol, GuardGun } from "../modes/office-sidescroller/weapons";
 import { SecurityGuard } from "../modes/office-sidescroller/enemies";
+import { Corpse } from "../modes/office-sidescroller/Corpse";
 import { lobbyLevel, type LevelData } from "../modes/office-sidescroller/lobby-level";
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 import { ComboSystem } from "../core/ComboSystem";
@@ -22,6 +23,7 @@ export class GameScene extends Phaser.Scene {
   private hud!: HUD;
   private particles!: Particles;
   private fx!: HitFx;
+  private corpses!: Phaser.Physics.Arcade.Group;
   private keys!: PlayerKeys;
   private level!: LevelData;
   private caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -62,6 +64,7 @@ export class GameScene extends Phaser.Scene {
     this.guardGun = new GuardGun(this);
 
     this.guards = this.physics.add.group({ classType: SecurityGuard, runChildUpdate: false });
+    this.corpses = this.physics.add.group({ classType: Corpse, runChildUpdate: false });
     for (const e of lvl.enemies) {
       if (e.type === "guard") {
         // Spawn slightly above ground so gravity drops them onto it.
@@ -73,6 +76,7 @@ export class GameScene extends Phaser.Scene {
     // --- Colliders ---
     this.physics.add.collider(this.player, this.platforms);
     this.physics.add.collider(this.guards, this.platforms);
+    this.physics.add.collider(this.corpses, this.platforms);
     // Low obstacles ONLY collide with the player when they're NOT sliding
     this.physics.add.collider(
       this.player,
@@ -98,17 +102,24 @@ export class GameScene extends Phaser.Scene {
       const e = enemy as SecurityGuard;
       const hx = b.x;
       const hy = b.y;
+      // Capture bullet travel direction before recycling resets velocity.
+      const bulletBody = b.body as Phaser.Physics.Arcade.Body;
+      const hitDir = bulletBody.velocity.x >= 0 ? 1 : -1;
       this.pistol.recycle(b);
       sound.hit();
       this.particles.impactSparks(hx, hy, 6);
       this.particles.playerHit(hx, hy);
       if (e.damage()) {
         const dx = e.x;
-        const dy = e.y - 60;
+        const dy = e.y;
+        const eFacingRight = e.facingRight;
         e.destroy();
         sound.death();
-        this.particles.guardDeath(dx, dy);
+        this.particles.guardDeath(dx, dy - 60);
         this.fx.guardKill();
+        // Spawn ragdoll corpse
+        const corpse = new Corpse(this, dx, dy, "guard_idle", hitDir, eFacingRight);
+        this.corpses.add(corpse);
         this.combo.registerKill(this.time.now);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
