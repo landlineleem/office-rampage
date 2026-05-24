@@ -20,6 +20,7 @@ const REAL_ART_KEYS = [
   "guard_idle",
   "guard_walk_0",
   "guard_walk_1",
+  "lobby_background",
 ];
 
 export class BootScene extends Phaser.Scene {

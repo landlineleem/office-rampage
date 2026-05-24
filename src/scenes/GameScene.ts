@@ -229,18 +229,37 @@ export class GameScene extends Phaser.Scene {
     front.setOrigin(0, 0);
     front.setScrollFactor(0.55);
 
-    // Interior wall behind lobby zone
+    // Interior wall behind lobby zone — use AI lobby image if present,
+    // otherwise fall back to the procedural tile.
     const wallStart = lvl.exteriorEndX;
     const wallW = lvl.width - wallStart;
-    const lobbyWall = this.add.tileSprite(
-      wallStart,
-      0,
-      wallW,
-      lvl.groundY,
-      "lobby_wall"
-    );
-    lobbyWall.setOrigin(0, 0);
-    lobbyWall.setScrollFactor(0.7);
+
+    if (this.textures.exists("lobby_background")) {
+      const tex = this.textures.get("lobby_background");
+      const srcW = tex.source[0].width;
+      const srcH = tex.source[0].height;
+      // The image is roughly 75% wall / 25% marble floor. We want the
+      // wall portion to span from ceiling (~y=160) to the ground line
+      // (y=540) — that's 380px tall. Image height to fit = 380 / 0.75.
+      const wallPortion = 0.75;
+      const targetWallHeight = lvl.groundY - 160;
+      const displayH = targetWallHeight / wallPortion;
+      const scale = displayH / srcH;
+      void srcW; // texture width drives tile repeat naturally via tileScale
+
+      // Image's wall/floor boundary should sit at groundY, so image top is
+      // at groundY - wall height = groundY - targetWallHeight.
+      const top = lvl.groundY - targetWallHeight;
+      const lobbyBg = this.add.tileSprite(wallStart, top, wallW, displayH, "lobby_background");
+      lobbyBg.setOrigin(0, 0);
+      lobbyBg.setTileScale(scale, scale);
+      lobbyBg.setScrollFactor(0.8);
+      lobbyBg.setDepth(1);
+    } else {
+      const lobbyWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, "lobby_wall");
+      lobbyWall.setOrigin(0, 0);
+      lobbyWall.setScrollFactor(0.7);
+    }
   }
 
   private buildGroundAndFloor(lvl: LevelData): void {
@@ -287,15 +306,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildInteriorDecor(lvl: LevelData): void {
-    // Columns — texture is 32x200, anchor bottom on the ground
+    // Columns, wall monitors, and floor plants are now baked into the AI
+    // lobby_background image. Only run the procedural decor when the
+    // background image isn't loaded (early-dev fallback).
+    if (this.textures.exists("lobby_background")) return;
+
     const colXs = [950, 1450, 2050, 2550];
     for (const x of colXs) {
       this.add.image(x, lvl.groundY, "column").setOrigin(0.5, 1);
     }
-    // Wall monitors — mounted on the back wall well above head height
     this.add.image(1380, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
     this.add.image(1480, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
-    // Plants — origin (0.5, 1) sits the pot on the ground
     [880, 1620, 2200, 2860].forEach((x) =>
       this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
     );
