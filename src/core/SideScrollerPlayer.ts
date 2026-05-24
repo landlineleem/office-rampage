@@ -9,29 +9,29 @@ export type PlayerKeys = {
   E: Phaser.Input.Keyboard.Key;
 };
 
-// Display dimensions are fixed regardless of source texture size. Real
-// AI sprites (~400x650) and procedural fallbacks (32x56) both get
-// scaled to the same on-screen size so things stay consistent as art
-// lands one sprite at a time.
-const STAND_W = 76;
+// On-screen height is fixed; width adapts to each frame's source aspect
+// so a walking pose (legs spread, wide silhouette) doesn't get
+// horizontally squished to match an idle pose (narrow silhouette).
 const STAND_H = 156;
-const SLIDE_W = 156;
 const SLIDE_H = 76;
-
-// Body collider in *display* pixels — converted to source pixels per-texture
-// when applied to the physics body (since body.setSize/Offset live in
-// source-pixel space and scale with sprite.scale).
+// Body collider in DISPLAY pixels — converted to source-pixel offsets
+// per-texture so it stays the same physical size regardless of which
+// sprite is currently loaded.
 const STAND_BODY_W = 36;
-const STAND_BODY_H = 144;
-const SLIDE_BODY_W = 130;
+const STAND_BODY_H = 150;
+const SLIDE_BODY_W = 120;
 const SLIDE_BODY_H = 54;
 
-// Shoulder anchor in display pixels above the feet (= sprite.y, since
-// origin is (0.5, 1.0)). Tuned for the AI sprite where the shoulder line
-// sits roughly at 22% from the top of the image.
-const SHOULDER_OFFSET_Y = -120;
+// Shoulder anchor in display pixels above the feet (= sprite.y, origin
+// is (0.5, 1.0)). Tuned for the AI character's shoulder line.
+const SHOULDER_OFFSET_Y = -118;
 const ARM_DISPLAY_W = 72;
 const ARM_DISPLAY_H = 18;
+
+// How long after firing the gun-arm overlay stays visible. Hidden
+// otherwise so the AI character's own arms read as the character's arms
+// and we don't get the "three arms" effect during normal movement.
+const ARM_LINGER_MS = 350;
 
 export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   hp: number;
@@ -48,14 +48,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   private arm: Phaser.GameObjects.Sprite;
   private muzzle: Phaser.GameObjects.Sprite;
   private muzzleHideAt = 0;
+  private armActiveUntil = 0;
   private walkPhase = 0;
-  // Cache whether the real (non-procedural) animation frames are loaded.
-  // If absent, we just hold on player_idle for any grounded state.
   private hasRealWalkFrames = false;
   private hasRealJumpFrame = false;
-  // Avoid re-applying body size + offset every frame — that causes a tiny
-  // vertical drift when called on each tick, which read as "floating while
-  // walking" in v0.6.
   private currentPoseKey = "";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -65,7 +61,8 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     this.setOrigin(0.5, 1.0);
     this.setDepth(10);
 
-    this.hasRealWalkFrames = this.isRealArt("player_walk_0");
+    this.hasRealWalkFrames =
+      this.isRealArt("player_walk_0") && this.isRealArt("player_walk_1");
     this.hasRealJumpFrame = this.isRealArt("player_jump");
 
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -73,7 +70,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     body.setMaxVelocity(800, 1400);
     body.setCollideWorldBounds(true);
 
-    this.applyPose("player_idle", STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
+    this.applyPose("player_idle", "stand");
 
     this.hp = SideScrollerConfig.player.maxHP;
 
@@ -81,6 +78,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     this.arm.setOrigin(0, 0.5);
     this.arm.setDisplaySize(ARM_DISPLAY_W, ARM_DISPLAY_H);
     this.arm.setDepth(11);
+    this.arm.setVisible(false);
 
     this.muzzle = scene.add.sprite(0, 0, "muzzle");
     this.muzzle.setOrigin(0, 0.5);
@@ -94,30 +92,24 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     return this.scene.textures.get(key).source[0].width > 96;
   }
 
-  private applyPose(
-    key: string,
-    displayW: number,
-    displayH: number,
-    bodyDisplayW: number,
-    bodyDisplayH: number,
-    feetInset = 4
-  ): void {
-    if (this.currentPoseKey === key) return; // no-op for unchanged pose
+  private applyPose(key: string, category: "stand" | "slide"): void {
+    if (this.currentPoseKey === key) return;
     this.currentPoseKey = key;
     this.setTexture(key);
-    this.setDisplaySize(displayW, displayH);
+
     const src = this.texture.source[0];
+    const aspect = src.width / src.height;
+    const displayH = category === "stand" ? STAND_H : SLIDE_H;
+    const displayW = displayH * aspect;
+    this.setDisplaySize(displayW, displayH);
+
     const sx = displayW / src.width;
     const sy = displayH / src.height;
+    const bodyW = category === "stand" ? STAND_BODY_W : SLIDE_BODY_W;
+    const bodyH = category === "stand" ? STAND_BODY_H : SLIDE_BODY_H;
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(bodyDisplayW / sx, bodyDisplayH / sy);
-    // Body bottom = sprite_bottom - feetInset (display px) so that the
-    // collider lines up with the character's *actual* feet, not the
-    // sprite's transparent bottom edge. Origin (0.5, 1.0) puts sprite
-    // bottom at player.y, so body bottom = player.y - feetInset.
-    const offsetX = ((displayW - bodyDisplayW) / 2) / sx;
-    const offsetY = (displayH - bodyDisplayH - feetInset) / sy;
-    body.setOffset(offsetX, offsetY);
+    body.setSize(bodyW / sx, bodyH / sy);
+    body.setOffset(((displayW - bodyW) / 2) / sx, (displayH - bodyH) / sy);
   }
 
   isGrounded(): boolean {
@@ -150,7 +142,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       this.endSlide();
     }
 
-    this.aimAngle = Math.atan2(pointer.worldY - this.y + 60, pointer.worldX - this.x);
+    // Aim *from* the shoulder, not from the feet — so the cursor lines
+    // up with what the bullet actually hits.
+    const shoulderWorldY = this.y + SHOULDER_OFFSET_Y;
+    this.aimAngle = Math.atan2(pointer.worldY - shoulderWorldY, pointer.worldX - this.x);
     this.facingRight = Math.abs(this.aimAngle) <= Math.PI / 2;
 
     if (!inputBlocked) {
@@ -182,19 +177,19 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.updateAnimation(grounded);
-    this.updateArmAndMuzzle(time);
+    this.updateArmAndMuzzle(time, pointer.leftButtonDown());
   }
 
   private startSlide(): void {
     this.isSliding = true;
     this.slideEndsAt = this.scene.time.now + SideScrollerConfig.player.slideMs;
     this.slideDirection = this.facingRight ? 1 : -1;
-    this.applyPose("player_slide", SLIDE_W, SLIDE_H, SLIDE_BODY_W, SLIDE_BODY_H);
+    this.applyPose("player_slide", "slide");
   }
 
   private endSlide(): void {
     this.isSliding = false;
-    this.applyPose("player_idle", STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
+    this.applyPose("player_idle", "stand");
   }
 
   private updateAnimation(grounded: boolean): void {
@@ -211,19 +206,23 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       const f = Math.floor(this.walkPhase) % 2;
       key = f === 0 ? "player_walk_0" : "player_walk_1";
     }
-    this.applyPose(key, STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
+    this.applyPose(key, "stand");
     this.setFlipX(!this.facingRight);
   }
 
-  private updateArmAndMuzzle(time: number): void {
-    if (this.isSliding) {
-      this.arm.setVisible(false);
-      this.muzzle.setVisible(false);
-      return;
+  private updateArmAndMuzzle(time: number, shooting: boolean): void {
+    // Keep the gun-arm hidden by default so the AI character's normal
+    // arms read as the character's arms. Only flash it in while
+    // shooting (or for a brief linger after each shot).
+    if (shooting) {
+      this.armActiveUntil = Math.max(this.armActiveUntil, time + ARM_LINGER_MS);
     }
-    this.arm.setVisible(true);
-    // Shoulder x shifts with facing so the gun-arm anchors on the side the
-    // character is looking, not the center of the body
+    const armVisible = !this.isSliding && time < this.armActiveUntil;
+
+    this.arm.setVisible(armVisible);
+    this.muzzle.setVisible(time < this.muzzleHideAt && !this.isSliding);
+    if (!armVisible) return;
+
     const shoulderHorizontalOffset = this.facingRight ? 4 : -4;
     this.shoulderX = this.x + shoulderHorizontalOffset;
     this.shoulderY = this.y + SHOULDER_OFFSET_Y;
@@ -237,14 +236,12 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       const my = this.shoulderY + Math.sin(this.aimAngle) * armLen;
       this.muzzle.setPosition(mx, my);
       this.muzzle.setRotation(this.aimAngle);
-      this.muzzle.setVisible(true);
-    } else {
-      this.muzzle.setVisible(false);
     }
   }
 
   flashMuzzle(now: number): void {
     this.muzzleHideAt = now + 60;
+    this.armActiveUntil = Math.max(this.armActiveUntil, now + ARM_LINGER_MS);
   }
 
   override destroy(fromScene?: boolean): void {
