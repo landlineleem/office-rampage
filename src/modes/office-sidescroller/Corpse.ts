@@ -10,7 +10,6 @@ import Phaser from "phaser";
 // `sourceTextureWidth * scale` — for the AI guard sprite (377x661
 // source) that exploded the corpse to several hundred pixels tall.
 
-const BASE_W = 76;
 const BASE_H = 156;
 const BODY_W = 36;
 const BODY_H = 144;
@@ -33,8 +32,10 @@ export class Corpse extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(7);
     this.setFlipX(!facingRight);
 
-    const dispW = BASE_W * scale;
+    const src = this.texture.source[0];
+    // Preserve source aspect ratio so AI sprites don't squash
     const dispH = BASE_H * scale;
+    const dispW = dispH * (src.width / src.height);
     const bodyW = BODY_W * scale;
     const bodyH = BODY_H * scale;
     this.setDisplaySize(dispW, dispH);
@@ -44,7 +45,6 @@ export class Corpse extends Phaser.Physics.Arcade.Sprite {
     body.setVelocityX(hitDirection * 90);
     body.setVelocityY(-160);
     body.setCollideWorldBounds(false);
-    const src = this.texture.source[0];
     const sx = dispW / src.width;
     const sy = dispH / src.height;
     body.setSize(bodyW / sx, bodyH / sy);
