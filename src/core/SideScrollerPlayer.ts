@@ -36,6 +36,12 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   slideEndsAt = 0;
   slideDirection = 1;
   lastGroundedAt = 0;
+  // Jump counter — refreshes to 2 on ground touch. First jump uses full
+  // jumpVelocity, second jump (air-jump) uses half-velocity so the
+  // double-jump is a boost, not a doubling of max height.
+  jumpsRemaining = 2;
+  // Callback so GameScene can spawn an air-jump particle puff
+  onDoubleJump?: (x: number, y: number) => void;
   facingRight = true;
   aimAngle = 0;
   shoulderX = 0;
@@ -134,7 +140,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   ): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const grounded = this.isGrounded();
-    if (grounded) this.lastGroundedAt = time;
+    if (grounded) {
+      this.lastGroundedAt = time;
+      this.jumpsRemaining = 2; // refresh air jump on ground touch
+    }
     // Landing sound
     if (grounded && !this.wasGrounded) sound.land();
     this.wasGrounded = grounded;
@@ -160,13 +169,23 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
         if (vx !== 0) this.walkPhase += delta * 0.012;
       }
 
-      const canJump =
-        !this.isSliding &&
-        time - this.lastGroundedAt <= SideScrollerConfig.player.coyoteMs;
-      if (Phaser.Input.Keyboard.JustDown(keys.W) && canJump) {
-        body.setVelocityY(-SideScrollerConfig.player.jumpVelocity);
-        this.lastGroundedAt = -Infinity;
-        sound.jump();
+      if (Phaser.Input.Keyboard.JustDown(keys.W) && !this.isSliding) {
+        const coyoteJumpAvailable =
+          time - this.lastGroundedAt <= SideScrollerConfig.player.coyoteMs;
+        const isAirJump = !coyoteJumpAvailable;
+        if (isAirJump && this.jumpsRemaining > 0 && !grounded) {
+          // Double-jump (air jump) — half velocity, fires a particle puff
+          body.setVelocityY(-SideScrollerConfig.player.jumpVelocity * 0.7);
+          this.jumpsRemaining = 0; // used the air jump
+          sound.jump();
+          this.onDoubleJump?.(this.x, this.y);
+        } else if (coyoteJumpAvailable) {
+          // Ground (or coyote-time) jump — full velocity
+          body.setVelocityY(-SideScrollerConfig.player.jumpVelocity);
+          this.lastGroundedAt = -Infinity;
+          this.jumpsRemaining = 1; // air jump still available
+          sound.jump();
+        }
       }
 
       // Slide on S. If A or D is also held, the slide goes that direction;

@@ -134,6 +134,11 @@ export class GameScene extends Phaser.Scene {
     this.particles = new Particles(this);
     this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
+    // Air-jump particle puff so the double-jump feels visual + tactile
+    this.player.onDoubleJump = (x, y) => {
+      this.particles.slideDust(x, y - 4, 1);
+      this.particles.slideDust(x, y - 4, -1);
+    };
 
     // Build weapons[] from the unlocked set so each new floor honors the
     // player's accumulated arsenal.
