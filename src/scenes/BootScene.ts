@@ -7,28 +7,61 @@ import Phaser from "phaser";
 // 24-28px and height roughly 48-56px — small enough to look "indie 2D" and
 // large enough to read.
 
+// Sprite keys that we'll *try* to load as real PNG art from
+// `public/assets/sprites/{key}.png`. If a file is missing, BootScene
+// generates a procedural fallback so the game still runs.
+const REAL_ART_KEYS = [
+  "player_idle",
+  "player_walk_0",
+  "player_walk_1",
+  "player_jump",
+  "player_fall",
+  "player_slide",
+  "guard_idle",
+  "guard_walk_0",
+  "guard_walk_1",
+];
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: "Boot" });
   }
 
-  create(): void {
-    // Player body frames (no arm drawn — arm is a separate sprite that
-    // rotates to follow the mouse)
-    this.makeTexture("player_idle", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "idle"));
-    this.makeTexture("player_walk_0", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "walk0"));
-    this.makeTexture("player_walk_1", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "walk1"));
-    this.makeTexture("player_jump", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "jump"));
-    this.makeTexture("player_fall", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "fall"));
-    this.makeTexture("player_slide", 56, 32, (g) => this.drawPlayerSlide(g, 28, 16));
+  preload(): void {
+    this.load.on("loaderror", (file: Phaser.Loader.File) => {
+      // 404s on optional art assets are expected during early dev — log quietly.
+      console.info(`[asset] missing ${file.key} — using procedural fallback`);
+    });
+    for (const key of REAL_ART_KEYS) {
+      this.load.image(key, `assets/sprites/${key}.png`);
+    }
+  }
 
-    // The aiming arm + pistol. Origin (0, 0.5) so rotation pivots at the shoulder.
+  create(): void {
+    // Player body frames — only generate procedural if real PNG didn't load
+    if (!this.textures.exists("player_idle"))
+      this.makeTexture("player_idle", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "idle"));
+    if (!this.textures.exists("player_walk_0"))
+      this.makeTexture("player_walk_0", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "walk0"));
+    if (!this.textures.exists("player_walk_1"))
+      this.makeTexture("player_walk_1", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "walk1"));
+    if (!this.textures.exists("player_jump"))
+      this.makeTexture("player_jump", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "jump"));
+    if (!this.textures.exists("player_fall"))
+      this.makeTexture("player_fall", 32, 56, (g) => this.drawPlayerBody(g, 16, 32, "fall"));
+    if (!this.textures.exists("player_slide"))
+      this.makeTexture("player_slide", 56, 32, (g) => this.drawPlayerSlide(g, 28, 16));
+
+    // The aiming arm + pistol always procedural — it rotates dynamically with
+    // the mouse, which AI sprites can't help with.
     this.makeTexture("player_arm", 28, 8, (g) => this.drawPlayerArm(g));
 
-    // Security guard (enemy)
-    this.makeTexture("guard_idle", 32, 56, (g) => this.drawGuard(g, 16, 32, "idle"));
-    this.makeTexture("guard_walk_0", 32, 56, (g) => this.drawGuard(g, 16, 32, "walk0"));
-    this.makeTexture("guard_walk_1", 32, 56, (g) => this.drawGuard(g, 16, 32, "walk1"));
+    if (!this.textures.exists("guard_idle"))
+      this.makeTexture("guard_idle", 32, 56, (g) => this.drawGuard(g, 16, 32, "idle"));
+    if (!this.textures.exists("guard_walk_0"))
+      this.makeTexture("guard_walk_0", 32, 56, (g) => this.drawGuard(g, 16, 32, "walk0"));
+    if (!this.textures.exists("guard_walk_1"))
+      this.makeTexture("guard_walk_1", 32, 56, (g) => this.drawGuard(g, 16, 32, "walk1"));
     this.makeTexture("guard_arm", 26, 8, (g) => this.drawGuardArm(g));
 
     // Projectiles
