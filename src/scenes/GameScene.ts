@@ -3,7 +3,8 @@ import { SideScrollerPlayer, type PlayerKeys } from "../core/SideScrollerPlayer"
 import { Pistol, GuardGun } from "../modes/office-sidescroller/weapons";
 import { SecurityGuard } from "../modes/office-sidescroller/enemies";
 import { Corpse } from "../modes/office-sidescroller/Corpse";
-import { lobbyLevel, type LevelData } from "../modes/office-sidescroller/lobby-level";
+import type { LevelData } from "../modes/office-sidescroller/lobby-level";
+import { getLevel, hasNextLevel } from "../modes/office-sidescroller/levels";
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 import { ComboSystem } from "../core/ComboSystem";
 import { HUD } from "../ui/HUD";
@@ -32,13 +33,29 @@ export class GameScene extends Phaser.Scene {
   private slowMoActive = false;
   private withdrawalUntil = 0;
   private cleared = false;
+  private levelIndex = 0;
+  private inheritedScore = 0;
+  private inheritedKills = 0;
+  private inheritedBestCombo = 0;
 
   constructor() {
     super({ key: "Game" });
   }
 
+  init(data: {
+    levelIndex?: number;
+    score?: number;
+    kills?: number;
+    bestCombo?: number;
+  }): void {
+    this.levelIndex = data.levelIndex ?? 0;
+    this.inheritedScore = data.score ?? 0;
+    this.inheritedKills = data.kills ?? 0;
+    this.inheritedBestCombo = data.bestCombo ?? 0;
+  }
+
   create(): void {
-    this.level = lobbyLevel;
+    this.level = getLevel(this.levelIndex);
     const lvl = this.level;
 
     this.caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -59,6 +76,9 @@ export class GameScene extends Phaser.Scene {
     this.buildElevator(lvl);
 
     this.combo = new ComboSystem();
+    this.combo.score = this.inheritedScore;
+    this.combo.totalKills = this.inheritedKills;
+    this.combo.best = this.inheritedBestCombo;
     this.particles = new Particles(this);
     this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
@@ -166,7 +186,9 @@ export class GameScene extends Phaser.Scene {
       if (this.cleared) return;
       this.cleared = true;
       this.scene.start("LevelCleared", {
-        wave: 1,
+        levelIndex: this.levelIndex,
+        levelName: this.level.name,
+        hasNext: hasNextLevel(this.levelIndex),
         kills: this.combo.totalKills,
         best: this.combo.best,
         score: this.combo.score,
@@ -290,7 +312,7 @@ export class GameScene extends Phaser.Scene {
       this.player.hp,
       this.caffeineMs,
       this.combo.count,
-      1,
+      this.levelIndex + 1,
       this.combo.score,
       inWithdrawal
     );
@@ -298,52 +320,64 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- Setup helpers ----------
   private buildBackground(lvl: LevelData): void {
-    // Sky gradient stretched across the full level
+    // Sky gradient stretched across the full level (always shown — gives
+    // any windows / glass doors something to "see out to")
     const sky = this.add.tileSprite(0, 0, lvl.width, 360, "sky_gradient");
     sky.setOrigin(0, 0);
     sky.setScrollFactor(0.1);
 
-    // Parallax skyline (far)
-    const back = this.add.tileSprite(0, 180, lvl.width, 200, "skyline_back");
+    // Parallax skyline (far + near)
+    const back = this.add.tileSprite(0, 180, lvl.width, 240, "skyline_back");
     back.setOrigin(0, 0);
     back.setScrollFactor(0.3);
-
-    // Parallax skyline (near)
-    const front = this.add.tileSprite(0, 200, lvl.width, 240, "skyline_front");
+    const front = this.add.tileSprite(0, 200, lvl.width, 300, "skyline_front");
     front.setOrigin(0, 0);
     front.setScrollFactor(0.55);
 
-    // Interior wall behind lobby zone — use AI lobby image if present,
-    // otherwise fall back to the procedural tile.
+    // Interior wall — texture varies by theme
     const wallStart = lvl.exteriorEndX;
     const wallW = lvl.width - wallStart;
+    const wallTexture = lvl.theme === "cubicles" ? "cubicle_wall" : "lobby_wall";
+    const interiorWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, wallTexture);
+    interiorWall.setOrigin(0, 0);
+    interiorWall.setScrollFactor(0.85);
 
-    const lobbyWall = this.add.tileSprite(wallStart, 0, wallW, lvl.groundY, "lobby_wall");
-    lobbyWall.setOrigin(0, 0);
-    lobbyWall.setScrollFactor(0.85);
+    // Cubicle dividers as background decor (parallax slower than walls)
+    if (lvl.theme === "cubicles") {
+      for (let x = 400; x < lvl.width; x += 520) {
+        this.add
+          .image(x, lvl.groundY, "cubicle_divider")
+          .setOrigin(0.5, 1)
+          .setScrollFactor(0.92);
+      }
+    }
   }
 
   private buildGroundAndFloor(lvl: LevelData): void {
     this.platforms = this.physics.add.staticGroup();
 
-    // Visual floor — tiled pavement outside, marble inside
-    const pavement = this.add.tileSprite(
-      0,
-      lvl.groundY,
-      lvl.exteriorEndX,
-      lvl.height - lvl.groundY,
-      "pavement_tile"
-    );
-    pavement.setOrigin(0, 0);
+    // Exterior pavement (only if level has an outdoor section)
+    if (lvl.exteriorEndX > 0) {
+      const pavement = this.add.tileSprite(
+        0,
+        lvl.groundY,
+        lvl.exteriorEndX,
+        lvl.height - lvl.groundY,
+        "pavement_tile"
+      );
+      pavement.setOrigin(0, 0);
+    }
 
-    const marble = this.add.tileSprite(
+    // Interior floor — marble for lobby, carpet for cubicles
+    const interiorTexture = lvl.theme === "cubicles" ? "carpet_tile" : "marble_tile";
+    const interior = this.add.tileSprite(
       lvl.exteriorEndX,
       lvl.groundY,
       lvl.width - lvl.exteriorEndX,
       lvl.height - lvl.groundY,
-      "marble_tile"
+      interiorTexture
     );
-    marble.setOrigin(0, 0);
+    interior.setOrigin(0, 0);
 
     // Invisible ground collider — one big static body
     const ground = this.add.rectangle(
@@ -359,30 +393,51 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildExteriorDecor(lvl: LevelData): void {
-    // Lampposts spaced along the sidewalk.
+    if (lvl.exteriorEndX <= 0) return;
     [200, 480, 720].forEach((x) =>
       this.add.image(x, lvl.groundY, "lamppost").setOrigin(0.5, 1)
     );
-    // Revolving door at the building entrance (visual — player walks past).
     this.add.image(lvl.exteriorEndX - 70, lvl.groundY, "revolving_door").setOrigin(0.5, 1);
   }
 
   private buildInteriorDecor(lvl: LevelData): void {
-    // Tall marble columns at decorative rhythm across the lobby.
+    if (lvl.theme === "lobby") this.buildLobbyDecor(lvl);
+    else this.buildCubiclesDecor(lvl);
+
+    // Ceiling lights — both themes get these
+    for (let x = lvl.exteriorEndX + 80; x < lvl.width - 80; x += 220) {
+      this.add.image(x, 24, "ceiling_light").setOrigin(0.5, 0);
+    }
+  }
+
+  private buildLobbyDecor(lvl: LevelData): void {
     const colXs = [1100, 1750, 2400, 3050];
     for (const x of colXs) {
       this.add.image(x, lvl.groundY, "column").setOrigin(0.5, 1);
     }
-    // Wall monitors mounted high on the back wall.
     this.add.image(1380, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
     this.add.image(1600, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
     this.add.image(2700, lvl.groundY - 360, "monitor_wall").setOrigin(0.5, 0.5);
-    // Recessed ceiling lights running along the top.
-    for (let x = lvl.exteriorEndX + 80; x < lvl.width - 80; x += 220) {
-      this.add.image(x, 24, "ceiling_light").setOrigin(0.5, 0);
-    }
-    // Floor plants — bigger silhouettes, fewer of them so they read clean.
     [1000, 1980, 2650, 3300].forEach((x) =>
+      this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
+    );
+  }
+
+  private buildCubiclesDecor(lvl: LevelData): void {
+    // Server racks against the back wall
+    [500, 1200, 2800, 3600].forEach((x) =>
+      this.add.image(x, lvl.groundY, "server_rack").setOrigin(0.5, 1).setScrollFactor(0.95)
+    );
+    // Office chairs in front of (some) desks
+    [1000, 1800, 2600, 3400].forEach((x) =>
+      this.add.image(x, lvl.groundY, "office_chair").setOrigin(0.5, 1).setDepth(6)
+    );
+    // Water coolers
+    [350, 3000].forEach((x) =>
+      this.add.image(x, lvl.groundY, "water_cooler_2").setOrigin(0.5, 1)
+    );
+    // A couple of plants for breaks
+    [600, 2400].forEach((x) =>
       this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
     );
   }

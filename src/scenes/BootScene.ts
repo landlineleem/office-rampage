@@ -105,6 +105,13 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("pavement_tile", 96, 48, (g) => this.drawPavement(g));
     this.makeTexture("marble_tile", 96, 48, (g) => this.drawMarble(g));
     this.makeTexture("lobby_wall", 96, 96, (g) => this.drawLobbyWall(g));
+    this.makeTexture("cubicle_wall", 96, 96, (g) => this.drawCubicleWall(g));
+    this.makeTexture("carpet_tile", 96, 48, (g) => this.drawCarpet(g));
+    this.makeTexture("cubicle_divider", 200, 130, (g) => this.drawCubicleDivider(g));
+    this.makeTexture("office_chair", 60, 100, (g) => this.drawOfficeChair(g));
+    this.makeTexture("hanging_light", 160, 24, (g) => this.drawHangingLight(g));
+    this.makeTexture("water_cooler_2", 60, 130, (g) => this.drawWaterCooler(g));
+    this.makeTexture("server_rack", 84, 200, (g) => this.drawServerRack(g));
 
     this.scene.start("Menu");
   }
@@ -846,5 +853,165 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(0, H - 8, W, 4);
     g.fillStyle(0x8a6438, 1);
     g.fillRect(0, H - 4, W, 4);
+  }
+
+  private drawCubicleWall(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 96 — industrial gray office wall with subtle panel lines.
+    const W = 96, H = 96;
+    g.fillStyle(0xb8bcc4, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0xa0a4ac, 0.5);
+    g.fillRect(0, H / 2, W, H / 2);
+    // Vertical seam lines (drywall panels)
+    g.fillStyle(0x8c9098, 0.5);
+    g.fillRect(W / 2 - 1, 0, 1, H);
+    // Floor trim
+    g.fillStyle(0x2c2f38, 1);
+    g.fillRect(0, H - 6, W, 6);
+  }
+
+  private drawCarpet(g: Phaser.GameObjects.Graphics): void {
+    // 96 x 48 — industrial gray office carpet, subtle weave.
+    const W = 96, H = 48;
+    g.fillStyle(0x5a5d68, 1);
+    g.fillRect(0, 0, W, H);
+    // Tile seams (large 24" carpet squares)
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(0, 0, W, 2);
+    g.fillRect(W / 2 - 1, 0, 2, H);
+    // Subtle weave dots
+    g.fillStyle(0x6c6f78, 0.4);
+    for (let y = 6; y < H; y += 4) {
+      for (let x = 6; x < W; x += 4) {
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  private drawCubicleDivider(g: Phaser.GameObjects.Graphics): void {
+    // 200 x 130 — fabric-covered partition wall (background decor).
+    const W = 200, H = 130;
+    // Frame edges
+    g.fillStyle(0x4a4f5c, 1);
+    g.fillRect(0, 0, W, H);
+    // Fabric panel
+    g.fillStyle(0x7a8a9a, 1);
+    g.fillRect(4, 4, W - 8, H - 12);
+    // Subtle fabric weave shading
+    g.fillStyle(0x5a6a7a, 0.35);
+    for (let y = 8; y < H - 16; y += 6) g.fillRect(6, y, W - 12, 1);
+    // Top cap
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(0, 0, W, 6);
+    // Base/foot
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(0, H - 8, W, 8);
+    // Cable management notch on right side
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(W - 18, H / 2 - 8, 14, 16);
+  }
+
+  private drawOfficeChair(g: Phaser.GameObjects.Graphics): void {
+    // 60 x 100 — rolling office chair (side view).
+    const W = 60, H = 100;
+    // Wheel base (5-star spider)
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(8, H - 12, W - 16, 6);
+    g.fillCircle(12, H - 4, 5);
+    g.fillCircle(W - 12, H - 4, 5);
+    // Hydraulic pole
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(W / 2 - 3, H - 50, 6, 38);
+    // Seat
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(8, H - 60, W - 16, 14);
+    // Backrest
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(W - 22, H - 100, 14, 50);
+    g.fillStyle(0x3a3f4c, 1);
+    g.fillRect(W - 20, H - 98, 10, 46);
+    // Armrest
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(8, H - 70, 8, 22);
+  }
+
+  private drawHangingLight(g: Phaser.GameObjects.Graphics): void {
+    // 160 x 24 — fluorescent tube hanging from ceiling. Used as a
+    // low obstacle to slide under.
+    const W = 160;
+    // Chains
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(W / 4 - 1, 0, 2, 6);
+    g.fillRect((W / 4) * 3 - 1, 0, 2, 6);
+    // Housing
+    g.fillStyle(0x6a6f7c, 1);
+    g.fillRect(0, 6, W, 10);
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(0, 6, W, 3);
+    // Tube (bright white)
+    g.fillStyle(0xfaf0c8, 1);
+    g.fillRect(8, 10, W - 16, 4);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillRect(10, 11, W - 20, 1);
+    // Reflector below
+    g.fillStyle(0x4a4d58, 1);
+    g.fillRect(0, 16, W, 4);
+    // Glow underneath (additive feel)
+    g.fillStyle(0xfaf0c8, 0.3);
+    g.fillRect(8, 20, W - 16, 4);
+  }
+
+  private drawWaterCooler(g: Phaser.GameObjects.Graphics): void {
+    // 60 x 130 — water cooler.
+    const W = 60, H = 130;
+    // Bottle (upside-down jug)
+    g.fillStyle(0xc8e0f0, 1);
+    g.fillRect(8, 0, W - 16, 40);
+    g.fillStyle(0x88aabe, 0.7);
+    g.fillRect(10, 4, W - 20, 32);
+    // Cap
+    g.fillStyle(0x2a4a5a, 1);
+    g.fillRect(20, 38, W - 40, 8);
+    // Cooler body
+    g.fillStyle(0xe8e8ec, 1);
+    g.fillRect(0, 46, W, H - 46);
+    g.fillStyle(0xc8c8cc, 1);
+    g.fillRect(0, 46, W, 4);
+    // Spigot
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(W / 2 - 6, 80, 12, 8);
+    g.fillStyle(0x88c8ff, 1);
+    g.fillCircle(W / 2 - 6, 84, 2);
+    g.fillStyle(0xff5252, 1);
+    g.fillCircle(W / 2 + 6, 84, 2);
+    // Drip tray
+    g.fillStyle(0x1f232c, 1);
+    g.fillRect(W / 2 - 12, 96, 24, 6);
+  }
+
+  private drawServerRack(g: Phaser.GameObjects.Graphics): void {
+    // 84 x 200 — server rack with blinking LEDs (a few rendered as
+    // tiny lit rects).
+    const W = 84, H = 200;
+    g.fillStyle(0x1a1d24, 1);
+    g.fillRect(0, 0, W, H);
+    g.fillStyle(0x2a2f3a, 1);
+    g.fillRect(4, 4, W - 8, H - 8);
+    // Rack units (8 slots)
+    for (let i = 0; i < 8; i++) {
+      const y = 8 + i * 24;
+      g.fillStyle(0x14171f, 1);
+      g.fillRect(8, y, W - 16, 20);
+      // Status LEDs (random color)
+      const colors = [0x6abd5a, 0xffe066, 0xc73a3a, 0x88ddff];
+      for (let j = 0; j < 3; j++) {
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        g.fillStyle(c, 1);
+        g.fillRect(14 + j * 8, y + 6, 2, 2);
+      }
+      // Drive bay slot
+      g.fillStyle(0x3a3f4c, 1);
+      g.fillRect(W - 24, y + 4, 14, 12);
+    }
   }
 }

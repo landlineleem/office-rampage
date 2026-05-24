@@ -12,7 +12,11 @@ export type LowObstacle = {
 
 export type EnemySpawn = { type: "guard"; x: number };
 
+export type LevelTheme = "lobby" | "cubicles";
+
 export type LevelData = {
+  name: string;
+  theme: LevelTheme;
   width: number;
   height: number;
   groundY: number;
@@ -29,6 +33,8 @@ export type LevelData = {
 };
 
 export const lobbyLevel: LevelData = {
+  name: "Lobby",
+  theme: "lobby",
   width: 3600,
   height: 600,
   groundY: 540,
@@ -43,8 +49,6 @@ export const lobbyLevel: LevelData = {
   ],
   lowObstacles: [
     // Hazard barrier hanging at waist height — slide under.
-    // Bottom at y=480 → blocks standing (body top ~396) but slide body
-    // top (~486) clears it.
     {
       x: 2750,
       y: 414,
