@@ -7,6 +7,8 @@ interface GameOverData {
   kills: number;
   best: number;
   score: number;
+  levelIndex?: number;
+  unlockedWeapons?: string[];
 }
 
 const FONT = "ui-monospace, monospace";
@@ -98,26 +100,55 @@ export class GameOverScene extends Phaser.Scene {
         .setOrigin(0.5);
     });
 
-    const button = this.add
-      .text(cx, cy + 130, "▶ BACK TO WORK", {
+    const hasCheckpoint =
+      typeof data.levelIndex === "number" && data.levelIndex > 0;
+
+    const button1 = this.add
+      .text(cx, cy + 120, hasCheckpoint ? "▶ RETRY THIS FLOOR" : "▶ BACK TO WORK", {
         fontFamily: FONT,
-        fontSize: "24px",
+        fontSize: "22px",
         color: "#4cc4ff",
       })
       .setOrigin(0.5);
     this.tweens.add({
-      targets: button,
+      targets: button1,
       alpha: 0.4,
       yoyo: true,
       repeat: -1,
       duration: 700,
     });
 
-    const restart = (): void => {
+    let button2: Phaser.GameObjects.Text | null = null;
+    if (hasCheckpoint) {
+      button2 = this.add
+        .text(cx, cy + 160, "(R) restart from Floor 1", {
+          fontFamily: FONT,
+          fontSize: "14px",
+          color: "#888888",
+        })
+        .setOrigin(0.5);
+    }
+
+    const retryFloor = (): void => {
+      sound.uiClick();
+      if (hasCheckpoint) {
+        this.scene.start("Game", {
+          levelIndex: data.levelIndex,
+          unlockedWeapons: data.unlockedWeapons ?? ["single"],
+        });
+      } else {
+        this.scene.start("Game", { levelIndex: 0 });
+      }
+    };
+    const fullRestart = (): void => {
       sound.uiClick();
       this.scene.start("Game", { levelIndex: 0 });
     };
-    this.input.once("pointerdown", restart);
-    this.input.keyboard?.once("keydown-SPACE", restart);
+
+    this.input.once("pointerdown", retryFloor);
+    this.input.keyboard?.once("keydown-SPACE", retryFloor);
+    if (button2) {
+      this.input.keyboard?.once("keydown-R", fullRestart);
+    }
   }
 }

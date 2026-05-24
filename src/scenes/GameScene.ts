@@ -1021,9 +1021,11 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(600, () => {
       this.scene.start("GameOver", {
         wave: this.levelIndex + 1,
+        levelIndex: this.levelIndex,
         kills: this.combo.totalKills,
         best: this.combo.best,
         score: this.combo.score,
+        unlockedWeapons: Array.from(this.unlockedWeapons),
       });
     });
   }
