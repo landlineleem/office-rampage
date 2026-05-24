@@ -20,6 +20,7 @@ export class GameOverScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const cx = width / 2;
     const cy = height / 2;
+    this.input.setDefaultCursor("default");
 
     const beatHigh = saveHighScore({
       score: data.score,

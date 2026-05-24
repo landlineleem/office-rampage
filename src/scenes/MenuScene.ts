@@ -10,6 +10,8 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     const font = "ui-monospace, monospace";
+    // Restore system cursor if Game scene hid it
+    this.input.setDefaultCursor("default");
 
     // Background — NYC skyline at night, parallaxed in the menu too
     this.add.image(0, 0, "sky_gradient").setOrigin(0, 0).setDisplaySize(width, height);

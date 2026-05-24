@@ -22,6 +22,7 @@ export class LevelClearedScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const cx = width / 2;
     const cy = height / 2;
+    this.input.setDefaultCursor("default");
 
     // Persist high score on successful clears too
     saveHighScore({
