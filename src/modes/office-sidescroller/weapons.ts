@@ -129,6 +129,7 @@ function showTrail(
   if (trail) {
     trail.setPosition(bullet.x, bullet.y);
     trail.setRotation(angle);
+    trail.setTint(tint);
     trail.setVisible(true);
   }
   if (glow) {
