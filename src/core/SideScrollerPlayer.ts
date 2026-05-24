@@ -9,6 +9,30 @@ export type PlayerKeys = {
   E: Phaser.Input.Keyboard.Key;
 };
 
+// Display dimensions are fixed regardless of source texture size. Real
+// AI sprites (~400x650) and procedural fallbacks (32x56) both get
+// scaled to the same on-screen size so things stay consistent as art
+// lands one sprite at a time.
+const STAND_W = 76;
+const STAND_H = 156;
+const SLIDE_W = 156;
+const SLIDE_H = 76;
+
+// Body collider in *display* pixels — converted to source pixels per-texture
+// when applied to the physics body (since body.setSize/Offset live in
+// source-pixel space and scale with sprite.scale).
+const STAND_BODY_W = 36;
+const STAND_BODY_H = 144;
+const SLIDE_BODY_W = 130;
+const SLIDE_BODY_H = 54;
+
+// Shoulder anchor in display pixels above the feet (= sprite.y, since
+// origin is (0.5, 1.0)). Tuned for the AI sprite where the shoulder line
+// sits roughly at 22% from the top of the image.
+const SHOULDER_OFFSET_Y = -120;
+const ARM_DISPLAY_W = 72;
+const ARM_DISPLAY_H = 18;
+
 export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   invulnUntil = 0;
@@ -18,8 +42,6 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   lastGroundedAt = 0;
   facingRight = true;
   aimAngle = 0;
-  // Public shoulder world position, recomputed each frame so weapons can spawn
-  // staples from the correct hand location.
   shoulderX = 0;
   shoulderY = 0;
 
@@ -27,38 +49,62 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   private muzzle: Phaser.GameObjects.Sprite;
   private muzzleHideAt = 0;
   private walkPhase = 0;
+  // Cache whether the real (non-procedural) animation frames are loaded.
+  // If absent, we just hold on player_idle for any grounded state.
+  private hasRealWalkFrames = false;
+  private hasRealJumpFrame = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "player_idle");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    // Bottom-anchored origin: sprite y = feet. Makes "place me at the ground"
-    // trivial and keeps the visual + collider in sync across slide/stand swaps.
     this.setOrigin(0.5, 1.0);
+    this.setDepth(10);
+
+    this.hasRealWalkFrames = this.isRealArt("player_walk_0");
+    this.hasRealJumpFrame = this.isRealArt("player_jump");
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(SideScrollerConfig.player.bodyWidth, SideScrollerConfig.player.bodyHeight);
-    // Body bottom must equal sprite bottom (= feet). Offset is from sprite
-    // top-left, so offset.y = spriteHeight - bodyHeight.
-    body.setOffset(
-      (32 - SideScrollerConfig.player.bodyWidth) / 2,
-      56 - SideScrollerConfig.player.bodyHeight
-    );
     body.setGravityY(SideScrollerConfig.player.gravity);
     body.setMaxVelocity(800, 1400);
     body.setCollideWorldBounds(true);
 
+    this.applyPose("player_idle", STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
+
     this.hp = SideScrollerConfig.player.maxHP;
-    this.setDepth(10);
 
     this.arm = scene.add.sprite(x, y, "player_arm");
     this.arm.setOrigin(0, 0.5);
+    this.arm.setDisplaySize(ARM_DISPLAY_W, ARM_DISPLAY_H);
     this.arm.setDepth(11);
 
     this.muzzle = scene.add.sprite(0, 0, "muzzle");
     this.muzzle.setOrigin(0, 0.5);
+    this.muzzle.setDisplaySize(28, 20);
     this.muzzle.setDepth(12);
     this.muzzle.setVisible(false);
+  }
+
+  private isRealArt(key: string): boolean {
+    if (!this.scene.textures.exists(key)) return false;
+    return this.scene.textures.get(key).source[0].width > 96;
+  }
+
+  private applyPose(
+    key: string,
+    displayW: number,
+    displayH: number,
+    bodyDisplayW: number,
+    bodyDisplayH: number
+  ): void {
+    if (this.texture.key !== key) this.setTexture(key);
+    this.setDisplaySize(displayW, displayH);
+    const src = this.texture.source[0];
+    const sx = displayW / src.width;
+    const sy = displayH / src.height;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setSize(bodyDisplayW / sx, bodyDisplayH / sy);
+    body.setOffset(((displayW - bodyDisplayW) / 2) / sx, (displayH - bodyDisplayH) / sy);
   }
 
   isGrounded(): boolean {
@@ -91,12 +137,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       this.endSlide();
     }
 
-    // Aim (always tracks mouse — even while sliding)
-    this.aimAngle = Math.atan2(pointer.worldY - this.y, pointer.worldX - this.x);
+    this.aimAngle = Math.atan2(pointer.worldY - this.y + 60, pointer.worldX - this.x);
     this.facingRight = Math.abs(this.aimAngle) <= Math.PI / 2;
 
     if (!inputBlocked) {
-      // Horizontal movement (locked during slide)
       if (this.isSliding) {
         body.setVelocityX(this.slideDirection * SideScrollerConfig.player.slideVelocity);
       } else {
@@ -107,7 +151,6 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
         if (vx !== 0) this.walkPhase += delta * 0.012;
       }
 
-      // Jump (with brief coyote time)
       const canJump =
         !this.isSliding &&
         time - this.lastGroundedAt <= SideScrollerConfig.player.coyoteMs;
@@ -116,7 +159,6 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
         this.lastGroundedAt = -Infinity;
       }
 
-      // Slide (initiate)
       if (
         Phaser.Input.Keyboard.JustDown(keys.SHIFT) &&
         grounded &&
@@ -131,45 +173,32 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   }
 
   private startSlide(): void {
-    const body = this.body as Phaser.Physics.Arcade.Body;
     this.isSliding = true;
     this.slideEndsAt = this.scene.time.now + SideScrollerConfig.player.slideMs;
     this.slideDirection = this.facingRight ? 1 : -1;
-    // Use slide texture for hitbox dimensions. Slide sprite is 56x32.
-    this.setTexture("player_slide");
-    body.setSize(36, SideScrollerConfig.player.slideBodyHeight);
-    body.setOffset(
-      (56 - 36) / 2,
-      32 - SideScrollerConfig.player.slideBodyHeight
-    );
+    this.applyPose("player_slide", SLIDE_W, SLIDE_H, SLIDE_BODY_W, SLIDE_BODY_H);
   }
 
   private endSlide(): void {
-    const body = this.body as Phaser.Physics.Arcade.Body;
     this.isSliding = false;
-    this.setTexture("player_idle");
-    body.setSize(SideScrollerConfig.player.bodyWidth, SideScrollerConfig.player.bodyHeight);
-    body.setOffset(
-      (32 - SideScrollerConfig.player.bodyWidth) / 2,
-      56 - SideScrollerConfig.player.bodyHeight
-    );
+    this.applyPose("player_idle", STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
   }
 
   private updateAnimation(grounded: boolean): void {
     if (this.isSliding) {
-      this.setTexture("player_slide");
       this.setFlipX(!this.facingRight);
       return;
     }
     const body = this.body as Phaser.Physics.Arcade.Body;
-    if (!grounded) {
-      this.setTexture(body.velocity.y < 0 ? "player_jump" : "player_fall");
-    } else if (Math.abs(body.velocity.x) > 10) {
+    let key = "player_idle";
+    if (!grounded && this.hasRealJumpFrame) {
+      key = body.velocity.y < 0 ? "player_jump" : "player_fall";
+      if (!this.scene.textures.exists(key)) key = "player_idle";
+    } else if (grounded && Math.abs(body.velocity.x) > 10 && this.hasRealWalkFrames) {
       const f = Math.floor(this.walkPhase) % 2;
-      this.setTexture(f === 0 ? "player_walk_0" : "player_walk_1");
-    } else {
-      this.setTexture("player_idle");
+      key = f === 0 ? "player_walk_0" : "player_walk_1";
     }
+    this.applyPose(key, STAND_W, STAND_H, STAND_BODY_W, STAND_BODY_H);
     this.setFlipX(!this.facingRight);
   }
 
@@ -180,19 +209,19 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     this.arm.setVisible(true);
-    // Shoulder world position
-    this.shoulderX = this.x;
-    this.shoulderY = this.y + SideScrollerConfig.player.shoulderOffsetY;
+    // Shoulder x shifts with facing so the gun-arm anchors on the side the
+    // character is looking, not the center of the body
+    const shoulderHorizontalOffset = this.facingRight ? 4 : -4;
+    this.shoulderX = this.x + shoulderHorizontalOffset;
+    this.shoulderY = this.y + SHOULDER_OFFSET_Y;
     this.arm.setPosition(this.shoulderX, this.shoulderY);
     this.arm.setRotation(this.aimAngle);
-    // When aiming to the left half, flip the arm vertically so the gun
-    // stays "right side up" instead of being upside-down.
     this.arm.setFlipY(!this.facingRight);
 
     if (time < this.muzzleHideAt) {
-      const len = this.arm.width; // origin at left, gun is at right end
-      const mx = this.shoulderX + Math.cos(this.aimAngle) * len;
-      const my = this.shoulderY + Math.sin(this.aimAngle) * len;
+      const armLen = ARM_DISPLAY_W;
+      const mx = this.shoulderX + Math.cos(this.aimAngle) * armLen;
+      const my = this.shoulderY + Math.sin(this.aimAngle) * armLen;
       this.muzzle.setPosition(mx, my);
       this.muzzle.setRotation(this.aimAngle);
       this.muzzle.setVisible(true);
