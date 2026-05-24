@@ -24,6 +24,8 @@ export class GameScene extends Phaser.Scene {
   private particles!: Particles;
   private fx!: HitFx;
   private corpses!: Phaser.Physics.Arcade.Group;
+  private vignette!: Phaser.GameObjects.Image;
+  private slowMoTint!: Phaser.GameObjects.Rectangle;
   private keys!: PlayerKeys;
   private level!: LevelData;
   private caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -172,6 +174,22 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.hud = new HUD(this);
+
+    // --- Post-fx overlays ---
+    // Vignette darkens screen edges during slow-mo.
+    this.vignette = this.add.image(0, 0, "vignette");
+    this.vignette.setOrigin(0, 0);
+    this.vignette.setScrollFactor(0);
+    this.vignette.setDepth(1400);
+    this.vignette.setAlpha(0);
+
+    // Slight cool color tint to suggest time bending.
+    this.slowMoTint = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x88ddff, 0);
+    this.slowMoTint.setOrigin(0, 0);
+    this.slowMoTint.setScrollFactor(0);
+    this.slowMoTint.setDepth(1399);
+    this.slowMoTint.setBlendMode(Phaser.BlendModes.OVERLAY);
+
     // Camera focuses slightly above the player's feet so the player sits
     // roughly at the lower-third of the screen with headroom for jumps.
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1, -150, 80);
@@ -201,6 +219,17 @@ export class GameScene extends Phaser.Scene {
     if (previouslySlow !== this.slowMoActive) {
       sound.setSlowMo(this.slowMoActive);
       if (this.slowMoActive) this.fx.slowMoEnter();
+      // Tween the vignette + tint overlays in/out
+      this.tweens.add({
+        targets: this.vignette,
+        alpha: this.slowMoActive ? 1 : 0,
+        duration: 220,
+      });
+      this.tweens.add({
+        targets: this.slowMoTint,
+        fillAlpha: this.slowMoActive ? 0.25 : 0,
+        duration: 220,
+      });
     }
 
     const worldFactor = this.slowMoActive ? SideScrollerConfig.caffeine.slowFactor : 1;

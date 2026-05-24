@@ -82,6 +82,9 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("bullet_trail_guard", 48, 6, (g) => this.drawBulletTrail(g, 48, 6, 0xffa040));
     this.makeTexture("bullet_glow", 16, 16, (g) => this.drawBulletGlow(g));
 
+    // Vignette via raw canvas (Phaser Graphics doesn't do real radial gradients)
+    this.makeVignetteCanvas("vignette", 1280, 720);
+
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
     this.makeTexture("desk", 200, 96, (g) => this.drawReceptionDesk(g));
@@ -451,6 +454,26 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, (1 - r / 8) * 0.4);
       g.fillCircle(8, 8, r);
     }
+  }
+
+  private makeVignetteCanvas(key: string, w: number, h: number): void {
+    // Render a real radial gradient to a canvas, then register it as a
+    // Phaser texture. Used as a screen overlay during slow-mo.
+    if (this.textures.exists(key)) return;
+    const canvas = this.textures.createCanvas(key, w, h);
+    if (!canvas) return;
+    const ctx = canvas.getContext();
+    const cx = w / 2;
+    const cy = h / 2;
+    const inner = Math.min(w, h) * 0.18;
+    const outer = Math.sqrt(cx * cx + cy * cy);
+    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.5, "rgba(0,0,0,0.15)");
+    grad.addColorStop(1, "rgba(0,0,0,0.78)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    canvas.refresh();
   }
 
   // ---------- Props ----------
