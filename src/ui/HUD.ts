@@ -22,7 +22,7 @@ export class HUD {
       .setDepth(z);
 
     this.caffeineLabel = scene.add
-      .text(16, 44, "CAFFEINE  ·  hold E", {
+      .text(16, 44, "CAFFEINE  ·  hold SPACE", {
         fontFamily: FONT,
         fontSize: "11px",
         color: "#aaa",

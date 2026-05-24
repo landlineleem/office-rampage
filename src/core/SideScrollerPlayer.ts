@@ -2,11 +2,11 @@ import Phaser from "phaser";
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 
 export type PlayerKeys = {
+  W: Phaser.Input.Keyboard.Key;
   A: Phaser.Input.Keyboard.Key;
+  S: Phaser.Input.Keyboard.Key;
   D: Phaser.Input.Keyboard.Key;
   SPACE: Phaser.Input.Keyboard.Key;
-  SHIFT: Phaser.Input.Keyboard.Key;
-  E: Phaser.Input.Keyboard.Key;
 };
 
 // On-screen height is fixed; width adapts to each frame's source aspect
@@ -157,15 +157,18 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       const canJump =
         !this.isSliding &&
         time - this.lastGroundedAt <= SideScrollerConfig.player.coyoteMs;
-      if (Phaser.Input.Keyboard.JustDown(keys.SPACE) && canJump) {
+      if (Phaser.Input.Keyboard.JustDown(keys.W) && canJump) {
         body.setVelocityY(-SideScrollerConfig.player.jumpVelocity);
         this.lastGroundedAt = -Infinity;
       }
 
-      // Slide on SHIFT temporarily disabled so Win+Shift+S (screen clip)
-      // works in the browser without triggering an in-game slide.
-      // Keep startSlide referenced so the lint check doesn't strip it.
-      void this.startSlide;
+      // Slide on S. If A or D is also held, the slide goes that direction;
+      // otherwise slide in the currently-facing direction.
+      if (Phaser.Input.Keyboard.JustDown(keys.S) && grounded && !this.isSliding) {
+        if (keys.A.isDown) this.facingRight = false;
+        else if (keys.D.isDown) this.facingRight = true;
+        this.startSlide();
+      }
     }
 
     this.updateAnimation(grounded);

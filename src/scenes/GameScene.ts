@@ -139,16 +139,16 @@ export class GameScene extends Phaser.Scene {
     // roughly at the lower-third of the screen with headroom for jumps.
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1, -150, 80);
 
-    this.keys = this.input.keyboard!.addKeys("A,D,SPACE,SHIFT,E") as PlayerKeys;
+    this.keys = this.input.keyboard!.addKeys("W,A,S,D,SPACE") as PlayerKeys;
     this.input.mouse?.disableContextMenu();
   }
 
   override update(time: number, delta: number): void {
     if (this.player.hp <= 0 || this.cleared) return;
 
-    // --- Slow-mo on E ---
+    // --- Slow-mo on SPACE ---
     const inWithdrawal = time < this.withdrawalUntil;
-    const wantSlow = this.keys.E.isDown;
+    const wantSlow = this.keys.SPACE.isDown;
     if (wantSlow && this.caffeineMs > 0 && !inWithdrawal) {
       this.slowMoActive = true;
       this.caffeineMs -= delta;
