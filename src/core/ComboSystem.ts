@@ -1,11 +1,21 @@
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 
+export type ComboMilestoneCallback = (count: number, label: string) => void;
+
+const MILESTONES: Record<number, string> = {
+  5: "STREAK!",
+  10: "RAMPAGE!",
+  15: "UNSTOPPABLE!",
+  20: "GODLIKE!",
+};
+
 export class ComboSystem {
   count = 0;
   best = 0;
   totalKills = 0;
   score = 0;
   lastKillAt = -Infinity;
+  onMilestone?: ComboMilestoneCallback;
 
   registerKill(now: number): void {
     this.totalKills += 1;
@@ -17,6 +27,8 @@ export class ComboSystem {
     this.lastKillAt = now;
     if (this.count > this.best) this.best = this.count;
     this.score += this.count * 10;
+    const milestone = MILESTONES[this.count];
+    if (milestone) this.onMilestone?.(this.count, milestone);
   }
 
   update(now: number): void {

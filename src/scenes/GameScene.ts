@@ -27,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private corpses!: Phaser.Physics.Arcade.Group;
   private vignette!: Phaser.GameObjects.Image;
   private slowMoTint!: Phaser.GameObjects.Rectangle;
+  private crosshair!: Phaser.GameObjects.Image;
   private keys!: PlayerKeys;
   private level!: LevelData;
   private caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -82,6 +83,10 @@ export class GameScene extends Phaser.Scene {
     this.combo.score = this.inheritedScore;
     this.combo.totalKills = this.inheritedKills;
     this.combo.best = this.inheritedBestCombo;
+    this.combo.onMilestone = (_count, label) => {
+      this.hud.showBanner(label, 1100);
+      this.fx.flash(0xffe066, 200, 0.18);
+    };
     this.particles = new Particles(this);
     this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
@@ -208,6 +213,12 @@ export class GameScene extends Phaser.Scene {
     this.slowMoTint.setDepth(1399);
     this.slowMoTint.setBlendMode(Phaser.BlendModes.OVERLAY);
 
+    // Custom crosshair (hides system cursor inside the game canvas)
+    this.input.setDefaultCursor("none");
+    this.crosshair = this.add.image(0, 0, "crosshair");
+    this.crosshair.setDepth(1700);
+    this.crosshair.setBlendMode(Phaser.BlendModes.ADD);
+
     // Camera focuses slightly above the player's feet so the player sits
     // roughly at the lower-third of the screen with headroom for jumps.
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1, -150, 80);
@@ -261,6 +272,10 @@ export class GameScene extends Phaser.Scene {
     // pace from their POV.
 
     const pointer = this.input.activePointer;
+    // Track crosshair to the world cursor position; scale up during slow-mo
+    this.crosshair.setPosition(pointer.worldX, pointer.worldY);
+    this.crosshair.setScale(this.slowMoActive ? 1.4 : 1);
+    this.crosshair.setRotation(this.crosshair.rotation + 0.01);
     this.player.updateInput(
       time,
       delta,

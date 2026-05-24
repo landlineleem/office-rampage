@@ -85,6 +85,9 @@ export class BootScene extends Phaser.Scene {
     // Vignette via raw canvas (Phaser Graphics doesn't do real radial gradients)
     this.makeVignetteCanvas("vignette", 1280, 720);
 
+    // Custom mouse crosshair
+    this.makeTexture("crosshair", 36, 36, (g) => this.drawCrosshair(g));
+
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
     this.makeTexture("desk", 200, 96, (g) => this.drawReceptionDesk(g));
@@ -462,6 +465,23 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xffffff, (1 - r / 8) * 0.4);
       g.fillCircle(8, 8, r);
     }
+  }
+
+  private drawCrosshair(g: Phaser.GameObjects.Graphics): void {
+    // 36 x 36 — bright crosshair with center dot
+    const c = 18;
+    g.lineStyle(2, 0xffe066, 0.95);
+    // Four ticks
+    g.lineBetween(c - 14, c, c - 5, c);
+    g.lineBetween(c + 5, c, c + 14, c);
+    g.lineBetween(c, c - 14, c, c - 5);
+    g.lineBetween(c, c + 5, c, c + 14);
+    // Center dot
+    g.fillStyle(0xff5252, 1);
+    g.fillCircle(c, c, 1.5);
+    // Outer faint ring
+    g.lineStyle(1, 0xffe066, 0.3);
+    g.strokeCircle(c, c, 14);
   }
 
   private makeVignetteCanvas(key: string, w: number, h: number): void {
