@@ -72,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   private paused = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
   private lastBossNagAt = -Infinity;
+  private bossEngaged = false;
 
   constructor() {
     super({ key: "Game" });
@@ -744,6 +745,13 @@ export class GameScene extends Phaser.Scene {
       const pct = boss.hp / boss.config.hp;
       this.hud.showBossBar(boss.config.name);
       this.hud.updateBossBar(pct);
+      // First time the CEO leaves patrol = the moment he spots you.
+      // Drop a one-shot intro banner + a brief red flash.
+      if (!this.bossEngaged && boss.aiState !== "patrol") {
+        this.bossEngaged = true;
+        this.hud.showBanner("THE CEO HAS YOU IN HIS SIGHTS", 2200);
+        this.fx.flash(0xc73a3a, 350, 0.28);
+      }
     } else {
       this.hud.hideBossBar();
     }
