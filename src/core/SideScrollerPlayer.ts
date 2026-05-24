@@ -28,11 +28,6 @@ const SHOULDER_OFFSET_Y = -118;
 const ARM_DISPLAY_W = 72;
 const ARM_DISPLAY_H = 18;
 
-// How long after firing the gun-arm overlay stays visible. Hidden
-// otherwise so the AI character's own arms read as the character's arms
-// and we don't get the "three arms" effect during normal movement.
-const ARM_LINGER_MS = 350;
-
 export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   hp: number;
   invulnUntil = 0;
@@ -47,8 +42,6 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
 
   private arm: Phaser.GameObjects.Sprite;
   private muzzle: Phaser.GameObjects.Sprite;
-  private muzzleHideAt = 0;
-  private armActiveUntil = 0;
   private walkPhase = 0;
   private hasRealWalkFrames = false;
   private hasRealJumpFrame = false;
@@ -169,13 +162,8 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
 
       // Slide on SHIFT temporarily disabled so Win+Shift+S (screen clip)
       // works in the browser without triggering an in-game slide.
-      // if (
-      //   Phaser.Input.Keyboard.JustDown(keys.SHIFT) &&
-      //   grounded &&
-      //   !this.isSliding
-      // ) {
-      //   this.startSlide();
-      // }
+      // Keep startSlide referenced so the lint check doesn't strip it.
+      void this.startSlide;
     }
 
     this.updateAnimation(grounded);
@@ -212,38 +200,22 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(!this.facingRight);
   }
 
-  private updateArmAndMuzzle(time: number, shooting: boolean): void {
-    // Keep the gun-arm hidden by default so the AI character's normal
-    // arms read as the character's arms. Only flash it in while
-    // shooting (or for a brief linger after each shot).
-    if (shooting) {
-      this.armActiveUntil = Math.max(this.armActiveUntil, time + ARM_LINGER_MS);
-    }
-    const armVisible = !this.isSliding && time < this.armActiveUntil;
-
-    this.arm.setVisible(armVisible);
-    this.muzzle.setVisible(time < this.muzzleHideAt && !this.isSliding);
-    if (!armVisible) return;
-
+  private updateArmAndMuzzle(_time: number, _shooting: boolean): void {
+    // Arm + muzzle overlay disabled. The procedural flat arm clashed with
+    // the 3D AI character and the overlay-on-top approach can't be made
+    // to look right at this art level. Future plan (Path B): generate
+    // character sprites with multiple gun-arm aim angles baked in.
+    // Shoulder world position is still computed below so bullets fire
+    // from the right spot.
     const shoulderHorizontalOffset = this.facingRight ? 4 : -4;
     this.shoulderX = this.x + shoulderHorizontalOffset;
     this.shoulderY = this.y + SHOULDER_OFFSET_Y;
-    this.arm.setPosition(this.shoulderX, this.shoulderY);
-    this.arm.setRotation(this.aimAngle);
-    this.arm.setFlipY(!this.facingRight);
-
-    if (time < this.muzzleHideAt) {
-      const armLen = ARM_DISPLAY_W;
-      const mx = this.shoulderX + Math.cos(this.aimAngle) * armLen;
-      const my = this.shoulderY + Math.sin(this.aimAngle) * armLen;
-      this.muzzle.setPosition(mx, my);
-      this.muzzle.setRotation(this.aimAngle);
-    }
+    this.arm.setVisible(false);
+    this.muzzle.setVisible(false);
   }
 
-  flashMuzzle(now: number): void {
-    this.muzzleHideAt = now + 60;
-    this.armActiveUntil = Math.max(this.armActiveUntil, now + ARM_LINGER_MS);
+  flashMuzzle(_now: number): void {
+    // no-op while gun-arm + muzzle overlay are disabled
   }
 
   override destroy(fromScene?: boolean): void {
