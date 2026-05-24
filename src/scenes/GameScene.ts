@@ -190,7 +190,9 @@ export class GameScene extends Phaser.Scene {
     // added — see registerWeaponColliders).
     for (const weapon of this.weapons) this.registerWeaponColliders(weapon);
     this.physics.add.collider(this.guardGun.bullets, this.platforms, (bullet) => {
-      this.guardGun.recycle(bullet as Phaser.Physics.Arcade.Sprite);
+      const b = bullet as Phaser.Physics.Arcade.Sprite;
+      this.particles.impactSparks(b.x, b.y, 3);
+      this.guardGun.recycle(b);
     });
 
     // Pickup → player
@@ -329,9 +331,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private registerWeaponColliders(weapon: PlayerWeapon): void {
-    // Bullets that hit a platform are recycled
+    // Bullets that hit a platform spark + recycle
     this.physics.add.collider(weapon.bullets, this.platforms, (bullet) => {
-      weapon.recycle(bullet as Phaser.Physics.Arcade.Sprite);
+      const b = bullet as Phaser.Physics.Arcade.Sprite;
+      this.particles.impactSparks(b.x, b.y, 3);
+      weapon.recycle(b);
     });
     // Bullets that hit a guard apply damage / spawn the kill effects
     this.physics.add.overlap(weapon.bullets, this.guards, (bullet, enemy) => {
