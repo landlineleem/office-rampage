@@ -1,21 +1,19 @@
 export const SideScrollerConfig = {
   player: {
-    runSpeed: 280,
-    jumpVelocity: 720,
-    gravity: 1900,
-    slideMs: 460,
-    slideVelocity: 540,
-    coyoteMs: 100,
-    invulnMs: 450, // briefer i-frames since each hit is smaller now
+    runSpeed: 340, // faster — old 280 felt sluggish in big arenas
+    jumpVelocity: 900, // higher initial velocity...
+    gravity: 2700, // ...and stronger gravity = same apex height (~150px)
+    //                  but TIGHTER jump arc, less hang time. Less floaty.
+    slideMs: 420, // slightly shorter so slide doesn't dominate
+    slideVelocity: 620, // and faster — slides feel like a burst, not a glide
+    coyoteMs: 120,
+    invulnMs: 450,
     maxHP: 100,
-    // Damage values for the various ways the player can take a hit
     guardBulletDamage: 18,
     guardContactDamage: 15,
     bodyWidth: 18,
     bodyHeight: 44,
     slideBodyHeight: 22,
-    // Player sprite uses origin (0.5, 1.0) — y = feet. Shoulder is 30px
-    // above the feet (top of the torso, just below the neck).
     shoulderOffsetY: -30,
   },
   pistol: {

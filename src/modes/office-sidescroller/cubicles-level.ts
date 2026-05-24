@@ -1,23 +1,13 @@
 import type { LevelData } from "./lobby-level";
 
-// Floor 2 — Open Plan Cubicles (vertical edition)
+// Floor 2 — Open Plan Cubicles (verticality, simplified)
 //
-// VERTICALITY PILOT — this is the test for whether multi-level levels
-// feel good. If yes, the rest of the floors get the same treatment.
+// One ground route + an optional upper route via stairs on the left.
+// Upper route holds snipers that pepper the ground floor. Climbing up
+// lets you flank them from the high ground.
 //
-//                                                             elevator
-//                                                                ▼
-//   ━━━━━━━━━ MEZZANINE (one-way) ━━━━━━━━━              ━━━━━━━━━━━
-//             [Sniper]  [Sniper]
-//
-//                     ┌──┐
-//              ┌──┐   │  │                                  ┌──┐
-//   ━┌──┐━━━━━━┘  └━━━┘  └━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘  └━━━
-//    desk        stack to climb                                desk
-//   ground floor — guards + interns at large
-//
-// Players can take the ground route (faster) or climb the stack to
-// the mezzanine for high-ground advantage against the snipers up there.
+// Stairs widened to 100px each so they're easy to land on; only 2 jumps
+// to mezzanine instead of the previous 3.
 
 export const cubiclesLevel: LevelData = {
   name: "Cubicles",
@@ -29,61 +19,51 @@ export const cubiclesLevel: LevelData = {
   exteriorEndX: 0,
   elevator: { x: 4020, y: 540 },
   platforms: [
-    // -- Ground floor --
-    // Workstation desks (vault-able, 96 tall)
-    { x: 600, y: 444, width: 200, height: 96 },
-    { x: 3000, y: 444, width: 200, height: 96 },
-    { x: 3700, y: 444, width: 200, height: 96 },
+    // GROUND FLOOR
+    { x: 600, y: 444, width: 200, height: 96 }, // workstation 1
+    { x: 2900, y: 444, width: 200, height: 96 }, // workstation 2
+    { x: 3650, y: 444, width: 200, height: 96 }, // workstation 3
+    { x: 3350, y: 432, width: 76, height: 108 }, // file cabinet
 
-    // -- Left-side climb stack — staircase of three platforms cascading
-    //    up to the mezzanine height. Each step is small so the player has
-    //    to time their jumps.
-    { x: 1100, y: 480, width: 60, height: 60 },  // step 1 (top y=480)
-    { x: 1230, y: 420, width: 60, height: 120 }, // step 2 (top y=420)
-    { x: 1360, y: 360, width: 60, height: 180 }, // step 3 (top y=360)
+    // LEFT-SIDE CLIMB — 2 wide steps up to the mezzanine
+    { x: 1150, y: 446, width: 110, height: 94 }, // step 1 (top y=446, ~94px climb)
+    { x: 1320, y: 370, width: 110, height: 170 }, // step 2 (top y=370, ~76px climb to mezz)
 
-    // -- Mezzanine catwalk — long upper level walkway. One-way so the
-    //    player can jump UP through it from below (e.g. from the desk
-    //    at x=3000 directly to the underside) and land on it from above.
+    // MEZZANINE — one-way, spans 1500-2700 at y=300. Easy to land on
+    // from step 2 (only 70px above).
     {
       x: 1500,
       y: 300,
-      width: 1400,
-      height: 24,
+      width: 1200,
+      height: 22,
       oneWay: true,
       textureKey: "mezzanine",
     },
 
-    // -- Right-side ramp back down — gentler descent so player can move
-    //    off the mezzanine without dropping the full ~240 pixels in one
-    //    fall.
-    { x: 2950, y: 380, width: 60, height: 160 },
-    { x: 2820, y: 440, width: 60, height: 100 },
-
-    // File cabinet near the right side (a normal tall obstacle)
-    { x: 3400, y: 432, width: 76, height: 108 },
+    // RIGHT-SIDE DROP — wide platform you can land on after stepping
+    // off the mezzanine, then drop again to the ground.
+    { x: 2800, y: 420, width: 120, height: 120 },
   ],
   lowObstacles: [
     // Hanging fluorescent tubes — slide under on the ground route
     { x: 1900, y: 414, width: 160, height: 24, textureKey: "hanging_light" },
-    { x: 3300, y: 414, width: 160, height: 24, textureKey: "hanging_light" },
+    { x: 3200, y: 414, width: 160, height: 24, textureKey: "hanging_light" },
   ],
   enemies: [
     // Ground floor mix
     { kind: "guard", x: 400 },
-    { kind: "intern", x: 1800 },
-    { kind: "guard", x: 2300 },
-    { kind: "intern", x: 2900 },
+    { kind: "intern", x: 1700 },
+    { kind: "guard", x: 2400 },
+    { kind: "intern", x: 3100 },
     { kind: "guard", x: 3800 },
-    // SNIPERS on the mezzanine — spawn at mezzanine top y (300) so they
-    // sit on the catwalk. They'll fire down at the player on the ground.
+    // SNIPERS on the mezzanine (spawn at mezz top y=300)
     { kind: "sniper", x: 1700, y: 300 },
     { kind: "sniper", x: 2400, y: 300 },
   ],
   doorSpawners: [
     { x: 900, triggerX: 700, kind: "intern" },
     { x: 1700, triggerX: 1500, kind: "guard" },
-    { x: 3200, triggerX: 3000, kind: "intern" },
+    { x: 3100, triggerX: 2900, kind: "intern" },
     { x: 3700, triggerX: 3500, kind: "heavy" },
   ],
 };

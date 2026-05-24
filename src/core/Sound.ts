@@ -21,7 +21,7 @@ class SoundEngine {
       if (!Ctor) return;
       this.ctx = new Ctor();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.55;
+      this.master.gain.value = 0.72; // was 0.55 — audio felt thin
       // Slow-mo bus: a separate path that gets lowpass-filtered when
       // slow-mo is active. Most sounds route through here.
       this.slowMoBus = this.ctx.createGain();
@@ -87,17 +87,35 @@ class SoundEngine {
     if (now - this.lastGunshotAt < 0.04) return;
     this.lastGunshotAt = now;
 
-    // Crack: filtered noise burst
+    // 1) Sharp attack click — very short bright noise pop for the
+    //    initial transient. Gives the shot its "snap."
+    const clickBuf = this.noiseBuffer(0.02);
+    if (clickBuf) {
+      const click = this.ctx.createBufferSource();
+      click.buffer = clickBuf;
+      const clickFilter = this.ctx.createBiquadFilter();
+      clickFilter.type = "highpass";
+      clickFilter.frequency.value = 3500;
+      const clickGain = this.ctx.createGain();
+      this.envelope(clickGain, 0.55 * strength, 0.02);
+      click.connect(clickFilter);
+      clickFilter.connect(clickGain);
+      clickGain.connect(this.slowMoBus);
+      click.start(now);
+      click.stop(now + 0.03);
+    }
+
+    // 2) Crack body — filtered noise burst, fatter than before
     const buffer = this.noiseBuffer(0.18);
     if (buffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = buffer;
       const filter = this.ctx.createBiquadFilter();
       filter.type = "bandpass";
-      filter.frequency.value = 1400 + Math.random() * 600;
-      filter.Q.value = 0.8;
+      filter.frequency.value = 1200 + Math.random() * 500;
+      filter.Q.value = 1.1;
       const noiseGain = this.ctx.createGain();
-      this.envelope(noiseGain, 0.45 * strength, 0.12);
+      this.envelope(noiseGain, 0.6 * strength, 0.14);
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(this.slowMoBus);
@@ -105,48 +123,50 @@ class SoundEngine {
       noise.stop(now + 0.2);
     }
 
-    // Sub thump: square osc descending
+    // 3) Sub thump — square osc descending, deeper now (was 180→38, now 220→28)
     const osc = this.ctx.createOscillator();
     osc.type = "square";
-    osc.frequency.setValueAtTime(180 + Math.random() * 30, now);
-    osc.frequency.exponentialRampToValueAtTime(38, now + 0.08);
+    osc.frequency.setValueAtTime(220 + Math.random() * 40, now);
+    osc.frequency.exponentialRampToValueAtTime(28, now + 0.1);
     const oscGain = this.ctx.createGain();
-    this.envelope(oscGain, 0.32 * strength, 0.1);
+    this.envelope(oscGain, 0.45 * strength, 0.13);
     osc.connect(oscGain);
     oscGain.connect(this.slowMoBus);
     osc.start(now);
-    osc.stop(now + 0.12);
+    osc.stop(now + 0.15);
   }
 
   hit(): void {
     if (!this.ctx || !this.slowMoBus || this.muted) return;
     const now = this.ctx.currentTime;
+    // Punchier body thump
     const osc = this.ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.exponentialRampToValueAtTime(60, now + 0.07);
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.08);
     const gain = this.ctx.createGain();
-    this.envelope(gain, 0.4, 0.09);
+    this.envelope(gain, 0.55, 0.1);
     osc.connect(gain);
     gain.connect(this.slowMoBus);
     osc.start(now);
-    osc.stop(now + 0.11);
+    osc.stop(now + 0.12);
 
-    // Quick noise crack on top
-    const buffer = this.noiseBuffer(0.05);
+    // Sharp metallic ping — gives the hit a satisfying ring
+    const buffer = this.noiseBuffer(0.06);
     if (buffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = buffer;
       const filter = this.ctx.createBiquadFilter();
-      filter.type = "highpass";
-      filter.frequency.value = 3000;
+      filter.type = "bandpass";
+      filter.frequency.value = 4200;
+      filter.Q.value = 6;
       const ng = this.ctx.createGain();
-      this.envelope(ng, 0.2, 0.04);
+      this.envelope(ng, 0.32, 0.05);
       noise.connect(filter);
       filter.connect(ng);
       ng.connect(this.slowMoBus);
       noise.start(now);
-      noise.stop(now + 0.06);
+      noise.stop(now + 0.07);
     }
   }
 

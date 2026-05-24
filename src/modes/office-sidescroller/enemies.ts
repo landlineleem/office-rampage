@@ -165,6 +165,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   aiState: "patrol" | "aiming" | "firing" = "patrol";
   aimReadyAt = 0;
   lastShotAt = 0;
+  // While stunned, AI doesn't override velocity — lets a hit's knockback
+  // actually be visible instead of being clobbered the next frame.
+  stunUntil = 0;
   private arm: Phaser.GameObjects.Sprite;
   private laser?: Phaser.GameObjects.Graphics;
   private walkPhase = 0;
@@ -236,6 +239,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   think(time: number, delta: number, playerX: number, playerY: number, worldFactor: number): void {
+    // Stun lockout — let knockback velocity carry the body before AI
+    // overrides it again.
+    if (time < this.stunUntil) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
     const dx = playerX - this.x;
     const sightTargetY = playerY + BASE_SHOULDER_OFFSET * this.config.scale;
@@ -254,8 +260,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (this.config.walkSpeed === 0) {
         body.setVelocityX(0);
       } else {
-        // Slow advance toward player when aiming/firing? For now, just stop.
-        body.setVelocityX(0);
+        // STRAFE while firing — gentle back-and-forth so the enemy isn't a
+        // sitting duck. Amplitude scales with walk speed; stationary
+        // (sniper) enemies don't move.
+        const amp = this.config.walkSpeed * 0.55 * worldFactor;
+        const strafe = Math.sin(time * 0.004 + this.patrolCenter) * amp;
+        // Clamp inside patrol bounds — don't let the enemy strafe off
+        // their assigned area.
+        let vx = strafe;
+        if (this.x <= this.patrolMin && vx < 0) vx = 0;
+        if (this.x >= this.patrolMax && vx > 0) vx = 0;
+        body.setVelocityX(vx);
       }
       if (this.aiState === "aiming" && time >= this.aimReadyAt) {
         this.aiState = "firing";
@@ -343,12 +358,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  damage(amount = 1): boolean {
+  damage(amount = 1, knockbackX = 0): boolean {
     this.hp -= amount;
-    // Flash bright red regardless of base tint — the white flash from
-    // before was invisible on Security guards (whose base tint is white).
     this.setTint(0xff5050);
     this.scene.time.delayedCall(70, () => this.setTint(this.config.tint));
+    // Knockback: small horizontal push, scaled inversely by enemy size
+    // so heavies + CEO barely budge but interns get knocked around.
+    if (knockbackX !== 0) {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      const scale = 1 / Math.max(0.6, this.config.scale);
+      body.setVelocityX(knockbackX * scale);
+      body.setVelocityY(-80 * scale);
+      this.stunUntil = this.scene.time.now + 120;
+    }
     return this.hp <= 0;
   }
 

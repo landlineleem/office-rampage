@@ -362,11 +362,14 @@ export class GameScene extends Phaser.Scene {
       const bulletBody = b.body as Phaser.Physics.Arcade.Body;
       const hitDir = bulletBody.velocity.x >= 0 ? 1 : -1;
       const dmg = (b.getData("damage") as number | undefined) ?? 1;
+      // Capture bullet horizontal velocity for knockback before recycle
+      // resets it.
+      const knockbackX = bulletBody.velocity.x * 0.18;
       weapon.recycle(b);
       sound.hit();
-      this.particles.impactSparks(hx, hy, 6);
+      this.particles.impactSparks(hx, hy, 8);
       this.particles.playerHit(hx, hy);
-      if (e.damage(dmg)) {
+      if (e.damage(dmg, knockbackX)) {
         const dx = e.x;
         const dy = e.y;
         const eFacingRight = e.facingRight;
