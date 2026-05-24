@@ -353,8 +353,15 @@ export class GameScene extends Phaser.Scene {
         corpse.setScale(e.config.scale);
         this.corpses.add(corpse);
         this.combo.registerKill(this.time.now, e.config.scoreValue);
-        // Floating score popup at the kill location
         this.spawnScorePopup(dx, dy - 80, e.config.scoreValue * this.combo.count);
+        // Health pack drop chance — guaranteed from heavies + boss, small
+        // chance from everyone else.
+        const isHeavy = e.config.name === "Heavy" || e.config.name === "The CEO";
+        const dropRoll = Math.random();
+        if (isHeavy || dropRoll < 0.08) {
+          const pickup = new WeaponPickup(this, dx, dy - 40, "health_pack");
+          this.pickups.add(pickup);
+        }
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
           this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
@@ -496,6 +503,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPickup(p: WeaponPickup): void {
+    if (p.kind === "health_pack") {
+      const max = SideScrollerConfig.player.maxHP;
+      const before = this.player.hp;
+      this.player.hp = Math.min(max, before + 30);
+      sound.uiClick();
+      this.fx.flash(0x6abd5a, 200, 0.16);
+      this.spawnScorePopup(p.x, p.y - 20, this.player.hp - before);
+      p.destroy();
+      return;
+    }
     let unlockKey = "";
     let config: WeaponConfig | null = null;
     let label = "";

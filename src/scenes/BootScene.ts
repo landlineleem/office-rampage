@@ -92,6 +92,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("auto_stapler_pickup", 56, 32, (g) => this.drawAutoStaplerPickup(g));
     this.makeTexture("hole_punch_pickup", 56, 32, (g) => this.drawHolePunchPickup(g));
     this.makeTexture("swingline_pickup", 56, 32, (g) => this.drawSwinglinePickup(g));
+    this.makeTexture("health_pickup", 40, 32, (g) => this.drawHealthPickup(g));
 
     // Level props — scaled up roughly 2-3x from v0.x to match the new
     // ~156px-tall character.
@@ -585,6 +586,25 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0x12141b, 1);
     g.strokeRoundedRect(4, 14, W - 8, 14, 4);
     g.strokeRoundedRect(8, 4, W - 16, 12, 3);
+  }
+
+  private drawHealthPickup(g: Phaser.GameObjects.Graphics): void {
+    // 40 x 32 — energy drink can (green) with white cross icon
+    const W = 40, H = 32;
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(W / 2, H - 2, 28, 4);
+    g.fillStyle(0x6abd5a, 1);
+    g.fillRoundedRect(8, 4, W - 16, H - 8, 3);
+    g.fillStyle(0x4a8f3a, 1);
+    g.fillRect(8, H - 10, W - 16, 6);
+    g.fillStyle(0x8edd7a, 1);
+    g.fillRect(8, 4, W - 16, 4);
+    // White + cross
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(W / 2 - 4, 12, 8, 12);
+    g.fillRect(W / 2 - 6, 16, 12, 4);
+    g.lineStyle(1, 0x12141b, 1);
+    g.strokeRoundedRect(8, 4, W - 16, H - 8, 3);
   }
 
   private drawCrosshair(g: Phaser.GameObjects.Graphics): void {

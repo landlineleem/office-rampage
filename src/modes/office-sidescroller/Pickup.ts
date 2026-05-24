@@ -1,11 +1,16 @@
 import Phaser from "phaser";
 
-export type PickupKind = "auto_stapler" | "hole_punch" | "swingline";
+export type PickupKind =
+  | "auto_stapler"
+  | "hole_punch"
+  | "swingline"
+  | "health_pack";
 
 const PICKUP_TEXTURE: Record<PickupKind, string> = {
   auto_stapler: "auto_stapler_pickup",
   hole_punch: "hole_punch_pickup",
   swingline: "swingline_pickup",
+  health_pack: "health_pickup",
 };
 
 // A weapon pickup that drops on the ground from a dead enemy. Bobs up
