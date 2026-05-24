@@ -8,6 +8,7 @@ import { ComboSystem } from "../core/ComboSystem";
 import { HUD } from "../ui/HUD";
 import { sound } from "../core/Sound";
 import { Particles } from "../core/Particles";
+import { HitFx } from "../core/HitFx";
 
 export class GameScene extends Phaser.Scene {
   private player!: SideScrollerPlayer;
@@ -20,6 +21,7 @@ export class GameScene extends Phaser.Scene {
   private combo!: ComboSystem;
   private hud!: HUD;
   private particles!: Particles;
+  private fx!: HitFx;
   private keys!: PlayerKeys;
   private level!: LevelData;
   private caffeineMs = SideScrollerConfig.caffeine.maxMs;
@@ -54,6 +56,7 @@ export class GameScene extends Phaser.Scene {
 
     this.combo = new ComboSystem();
     this.particles = new Particles(this);
+    this.fx = new HitFx(this);
     this.player = new SideScrollerPlayer(this, lvl.playerStart.x, lvl.playerStart.y);
     this.pistol = new Pistol(this);
     this.guardGun = new GuardGun(this);
@@ -98,18 +101,21 @@ export class GameScene extends Phaser.Scene {
       this.pistol.recycle(b);
       sound.hit();
       this.particles.impactSparks(hx, hy, 6);
-      this.particles.playerHit(hx, hy); // small red splash on guard hit
+      this.particles.playerHit(hx, hy);
       if (e.damage()) {
         const dx = e.x;
         const dy = e.y - 60;
         e.destroy();
         sound.death();
         this.particles.guardDeath(dx, dy);
+        this.fx.guardKill();
         this.combo.registerKill(this.time.now);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
           this.caffeineMs + SideScrollerConfig.caffeine.killRefillMs
         );
+      } else {
+        this.fx.guardHit();
       }
     });
 
@@ -122,6 +128,7 @@ export class GameScene extends Phaser.Scene {
       if (this.player.takeDamage(this.time.now)) {
         sound.playerHurt();
         this.particles.playerHit(hx, hy);
+        this.fx.playerHurt();
         this.combo.break();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
@@ -135,6 +142,7 @@ export class GameScene extends Phaser.Scene {
       e.lastContact = now;
       if (this.player.takeDamage(now)) {
         sound.playerHurt();
+        this.fx.playerHurt();
         this.combo.break();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
@@ -179,7 +187,10 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.slowMoActive = false;
     }
-    if (previouslySlow !== this.slowMoActive) sound.setSlowMo(this.slowMoActive);
+    if (previouslySlow !== this.slowMoActive) {
+      sound.setSlowMo(this.slowMoActive);
+      if (this.slowMoActive) this.fx.slowMoEnter();
+    }
 
     const worldFactor = this.slowMoActive ? SideScrollerConfig.caffeine.slowFactor : 1;
     this.physics.world.timeScale = 1 / worldFactor; // higher timeScale = slower
@@ -390,11 +401,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPlayerDeath(): void {
-    this.scene.start("GameOver", {
-      wave: 1,
-      kills: this.combo.totalKills,
-      best: this.combo.best,
-      score: this.combo.score,
+    this.fx.playerDeath();
+    this.time.delayedCall(600, () => {
+      this.scene.start("GameOver", {
+        wave: 1,
+        kills: this.combo.totalKills,
+        best: this.combo.best,
+        score: this.combo.score,
+      });
     });
   }
 }
