@@ -247,28 +247,37 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawPlayerArm(g: Phaser.GameObjects.Graphics): void {
-    // 28x8. Sleeve on left, hand + pistol on right. Origin will be (0, 0.5).
-    // Sleeve (shirt blue)
-    g.fillStyle(0x4cc4ff, 1);
+    // 28x8. Sleeve on left, hand + pistol on right. Origin (0, 0.5) so
+    // rotation pivots at the shoulder. White sleeve to match the AI
+    // character's white dress shirt.
+    // Sleeve (white shirt, rolled-up cuff at the wrist)
+    g.fillStyle(0xf5f5f5, 1);
     g.fillRect(0, 1, 12, 6);
-    g.fillStyle(0x3aa5e0, 1);
+    g.fillStyle(0xdadada, 1);
     g.fillRect(0, 5, 12, 2);
+    // Cuff
+    g.fillStyle(0xc0c0c0, 1);
+    g.fillRect(10, 1, 2, 6);
     // Hand
     g.fillStyle(0xffd6b0, 1);
     g.fillRect(12, 2, 4, 5);
-    // Pistol barrel
-    g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(16, 2, 11, 3);
-    // Pistol grip
+    g.fillStyle(0xe8b890, 1);
+    g.fillRect(12, 5, 4, 2);
+    // Pistol — beefier, two-tone metal
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRect(15, 1, 13, 4);    // slide
+    g.fillStyle(0x3a3a3a, 1);
+    g.fillRect(15, 1, 13, 1);    // top highlight
     g.fillStyle(0x4a2a1a, 1);
-    g.fillRect(15, 4, 4, 4);
-    // Front sight
+    g.fillRect(14, 4, 4, 5);     // grip
+    g.fillStyle(0x6b3e1a, 1);
+    g.fillRect(14, 4, 1, 5);     // grip highlight
     g.fillStyle(0x4a4a4a, 1);
-    g.fillRect(25, 1, 2, 1);
-    // Outline
-    g.lineStyle(1, 0x12141b, 1);
+    g.fillRect(26, 0, 2, 1);     // front sight
+    // Outlines (cel-ish)
+    g.lineStyle(1, 0x000000, 0.5);
     g.strokeRect(0, 1, 12, 6);
-    g.strokeRect(16, 2, 11, 3);
+    g.strokeRect(15, 1, 13, 4);
   }
 
   // ---------- Guard ----------

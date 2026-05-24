@@ -53,6 +53,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   // If absent, we just hold on player_idle for any grounded state.
   private hasRealWalkFrames = false;
   private hasRealJumpFrame = false;
+  // Avoid re-applying body size + offset every frame — that causes a tiny
+  // vertical drift when called on each tick, which read as "floating while
+  // walking" in v0.6.
+  private currentPoseKey = "";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "player_idle");
@@ -95,16 +99,25 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     displayW: number,
     displayH: number,
     bodyDisplayW: number,
-    bodyDisplayH: number
+    bodyDisplayH: number,
+    feetInset = 4
   ): void {
-    if (this.texture.key !== key) this.setTexture(key);
+    if (this.currentPoseKey === key) return; // no-op for unchanged pose
+    this.currentPoseKey = key;
+    this.setTexture(key);
     this.setDisplaySize(displayW, displayH);
     const src = this.texture.source[0];
     const sx = displayW / src.width;
     const sy = displayH / src.height;
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(bodyDisplayW / sx, bodyDisplayH / sy);
-    body.setOffset(((displayW - bodyDisplayW) / 2) / sx, (displayH - bodyDisplayH) / sy);
+    // Body bottom = sprite_bottom - feetInset (display px) so that the
+    // collider lines up with the character's *actual* feet, not the
+    // sprite's transparent bottom edge. Origin (0.5, 1.0) puts sprite
+    // bottom at player.y, so body bottom = player.y - feetInset.
+    const offsetX = ((displayW - bodyDisplayW) / 2) / sx;
+    const offsetY = (displayH - bodyDisplayH - feetInset) / sy;
+    body.setOffset(offsetX, offsetY);
   }
 
   isGrounded(): boolean {
