@@ -167,13 +167,15 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
         this.lastGroundedAt = -Infinity;
       }
 
-      if (
-        Phaser.Input.Keyboard.JustDown(keys.SHIFT) &&
-        grounded &&
-        !this.isSliding
-      ) {
-        this.startSlide();
-      }
+      // Slide on SHIFT temporarily disabled so Win+Shift+S (screen clip)
+      // works in the browser without triggering an in-game slide.
+      // if (
+      //   Phaser.Input.Keyboard.JustDown(keys.SHIFT) &&
+      //   grounded &&
+      //   !this.isSliding
+      // ) {
+      //   this.startSlide();
+      // }
     }
 
     this.updateAnimation(grounded);
