@@ -142,7 +142,9 @@ export const CEO_BOSS: EnemyConfig = {
 };
 
 // ---------- Display constants ----------
-const BASE_STAND_W = 76;
+// Width is derived per-pose from source aspect ratio (so AI sprites
+// don't squash) — only height stays fixed. Body collider is also in
+// display pixels and gets converted to source-px in applyPose.
 const BASE_STAND_H = 156;
 const BASE_BODY_W = 36;
 const BASE_BODY_H = 144;
