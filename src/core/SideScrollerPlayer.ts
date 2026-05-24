@@ -32,14 +32,17 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, "player_idle");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setOrigin(0.5, 0.5);
+    // Bottom-anchored origin: sprite y = feet. Makes "place me at the ground"
+    // trivial and keeps the visual + collider in sync across slide/stand swaps.
+    this.setOrigin(0.5, 1.0);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(SideScrollerConfig.player.bodyWidth, SideScrollerConfig.player.bodyHeight);
-    // Center the hitbox horizontally; anchor it near the feet vertically.
+    // Body bottom must equal sprite bottom (= feet). Offset is from sprite
+    // top-left, so offset.y = spriteHeight - bodyHeight.
     body.setOffset(
       (32 - SideScrollerConfig.player.bodyWidth) / 2,
-      56 - SideScrollerConfig.player.bodyHeight - 2
+      56 - SideScrollerConfig.player.bodyHeight
     );
     body.setGravityY(SideScrollerConfig.player.gravity);
     body.setMaxVelocity(800, 1400);
@@ -132,12 +135,12 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     this.isSliding = true;
     this.slideEndsAt = this.scene.time.now + SideScrollerConfig.player.slideMs;
     this.slideDirection = this.facingRight ? 1 : -1;
-    // Use slide texture for hitbox dimensions
+    // Use slide texture for hitbox dimensions. Slide sprite is 56x32.
     this.setTexture("player_slide");
     body.setSize(36, SideScrollerConfig.player.slideBodyHeight);
     body.setOffset(
       (56 - 36) / 2,
-      32 - SideScrollerConfig.player.slideBodyHeight - 2
+      32 - SideScrollerConfig.player.slideBodyHeight
     );
   }
 
@@ -148,7 +151,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     body.setSize(SideScrollerConfig.player.bodyWidth, SideScrollerConfig.player.bodyHeight);
     body.setOffset(
       (32 - SideScrollerConfig.player.bodyWidth) / 2,
-      56 - SideScrollerConfig.player.bodyHeight - 2
+      56 - SideScrollerConfig.player.bodyHeight
     );
   }
 

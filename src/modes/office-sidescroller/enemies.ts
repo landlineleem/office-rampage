@@ -20,10 +20,11 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, "guard_idle");
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    this.setOrigin(0.5, 1.0); // y = feet, matches player convention
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(18, 44);
-    body.setOffset((32 - 18) / 2, 56 - 44 - 2);
+    body.setOffset((32 - 18) / 2, 56 - 44);
     body.setGravityY(SideScrollerConfig.player.gravity);
     body.setCollideWorldBounds(true);
 
@@ -70,7 +71,7 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
           this.lastShotAt = time;
           const angle = Math.atan2(dy, dx);
           const sx = this.x + Math.cos(angle) * 22;
-          const sy = this.y - 6 + Math.sin(angle) * 22;
+          const sy = this.y - 30 + Math.sin(angle) * 22;
           this.gun.fire(sx, sy, angle);
         }
       }
@@ -97,12 +98,12 @@ export class SecurityGuard extends Phaser.Physics.Arcade.Sprite {
     }
     this.setFlipX(!this.facingRight);
 
-    // Arm
+    // Arm at shoulder (top of torso ≈ 30px above feet)
     const showArm = this.aiState !== "patrol";
     this.arm.setVisible(showArm);
     if (showArm) {
       const sx = this.x;
-      const sy = this.y - 6;
+      const sy = this.y - 30;
       const angle = Math.atan2(dy, dx);
       this.arm.setPosition(sx, sy);
       this.arm.setRotation(angle);

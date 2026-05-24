@@ -11,7 +11,9 @@ export const SideScrollerConfig = {
     bodyWidth: 18,
     bodyHeight: 44,
     slideBodyHeight: 22,
-    shoulderOffsetY: -6,
+    // Player sprite uses origin (0.5, 1.0) — y = feet. Shoulder is 30px
+    // above the feet (top of the torso, just below the neck).
+    shoulderOffsetY: -30,
   },
   pistol: {
     fireRateMs: 180,

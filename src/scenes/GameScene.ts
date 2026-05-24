@@ -57,7 +57,8 @@ export class GameScene extends Phaser.Scene {
     this.guards = this.physics.add.group({ classType: SecurityGuard, runChildUpdate: false });
     for (const e of lvl.enemies) {
       if (e.type === "guard") {
-        const guard = new SecurityGuard(this, e.x, e.y, this.guardGun);
+        // Spawn slightly above ground so gravity drops them onto it.
+        const guard = new SecurityGuard(this, e.x, lvl.groundY - 4, this.guardGun);
         this.guards.add(guard);
       }
     }
@@ -134,7 +135,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.hud = new HUD(this);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1, -200, 0);
+    // Camera focuses slightly above the player's feet so the player sits
+    // roughly at the lower-third of the screen with headroom for jumps.
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1, -150, 80);
 
     this.keys = this.input.keyboard!.addKeys("A,D,SPACE,SHIFT,E") as PlayerKeys;
     this.input.mouse?.disableContextMenu();
@@ -276,40 +279,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildExteriorDecor(lvl: LevelData): void {
-    // Lamppost on the sidewalk
-    this.add.image(180, lvl.groundY - 90, "lamppost").setOrigin(0.5, 0.5);
-    this.add.image(550, lvl.groundY - 90, "lamppost").setOrigin(0.5, 0.5);
+    // Lampposts on the sidewalk — bottom anchored to ground
+    this.add.image(180, lvl.groundY, "lamppost").setOrigin(0.5, 1);
+    this.add.image(550, lvl.groundY, "lamppost").setOrigin(0.5, 1);
     // Revolving door at the building entrance (visual only — player walks past)
-    this.add.image(lvl.exteriorEndX - 50, lvl.groundY - 80, "revolving_door").setOrigin(0.5, 0.5);
+    this.add.image(lvl.exteriorEndX - 50, lvl.groundY, "revolving_door").setOrigin(0.5, 1);
   }
 
   private buildInteriorDecor(lvl: LevelData): void {
-    // Columns at decorative intervals inside the lobby
+    // Columns — texture is 32x200, anchor bottom on the ground
     const colXs = [950, 1450, 2050, 2550];
     for (const x of colXs) {
-      this.add.image(x, lvl.groundY - 100, "column").setOrigin(0.5, 0.5);
+      this.add.image(x, lvl.groundY, "column").setOrigin(0.5, 1);
     }
-    // Wall monitors behind reception
+    // Wall monitors — mounted on the back wall well above head height
     this.add.image(1380, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
     this.add.image(1480, lvl.groundY - 220, "monitor_wall").setOrigin(0.5, 0.5);
-    // Plants scattered
+    // Plants — origin (0.5, 1) sits the pot on the ground
     [880, 1620, 2200, 2860].forEach((x) =>
-      this.add.image(x, lvl.groundY - 30, "plant").setOrigin(0.5, 1)
+      this.add.image(x, lvl.groundY, "plant").setOrigin(0.5, 1)
     );
   }
 
   private buildPlatforms(lvl: LevelData): void {
     for (const p of lvl.platforms) {
-      // Visual: pick a texture by size — reception desk for the big one,
-      // file cabinet for the tall narrow one. Fallback = grey block.
-      let textureKey = "desk";
-      if (p.height > p.width) textureKey = "file_cabinet";
-      const sprite = this.add.image(p.x, p.y - p.height / 2, textureKey).setOrigin(0.5, 0.5);
-      // Resize via display dimensions (textures are pre-sized, but tolerate a
-      // bit of stretch)
-      sprite.setDisplaySize(p.width, p.height);
+      // Pick a texture by silhouette: tall-and-narrow = file cabinet, otherwise
+      // a reception desk. Position is the platform's *center*, which is below
+      // the walkable surface (p.y) by half-height.
+      const textureKey = p.height > p.width ? "file_cabinet" : "desk";
+      const cy = p.y + p.height / 2;
+      this.add.image(p.x, cy, textureKey).setOrigin(0.5, 0.5);
       const collider = this.add
-        .rectangle(p.x, p.y - p.height / 2, p.width, p.height, 0x000000, 0)
+        .rectangle(p.x, cy, p.width, p.height, 0x000000, 0)
         .setOrigin(0.5, 0.5);
       this.physics.add.existing(collider, true);
       this.platforms.add(collider);
@@ -319,10 +320,10 @@ export class GameScene extends Phaser.Scene {
   private buildLowObstacles(lvl: LevelData): void {
     this.lowObstacles = this.physics.add.staticGroup();
     for (const o of lvl.lowObstacles) {
-      const sprite = this.add.image(o.x, o.y - o.height / 2, o.textureKey).setOrigin(0.5, 0.5);
-      sprite.setDisplaySize(o.width, o.height);
+      const cy = o.y + o.height / 2;
+      this.add.image(o.x, cy, o.textureKey).setOrigin(0.5, 0.5);
       const collider = this.add
-        .rectangle(o.x, o.y - o.height / 2, o.width, o.height, 0x000000, 0)
+        .rectangle(o.x, cy, o.width, o.height, 0x000000, 0)
         .setOrigin(0.5, 0.5);
       this.physics.add.existing(collider, true);
       this.lowObstacles.add(collider);
@@ -330,19 +331,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildElevator(lvl: LevelData): void {
+    // Elevator texture is 100x130. Anchor bottom to ground (lvl.elevator.y).
     this.elevator = this.physics.add.sprite(
       lvl.elevator.x,
-      lvl.elevator.y - 65,
+      lvl.elevator.y,
       "elevator"
     );
+    this.elevator.setOrigin(0.5, 1.0);
     const body = this.elevator.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.setImmovable(true);
     this.elevator.setDepth(5);
 
-    // Floating "GOAL ↑" hint above the elevator
+    // Floating "GOAL ▼" hint above the elevator
     this.add
-      .text(lvl.elevator.x, lvl.elevator.y - 150, "GOAL ▼", {
+      .text(lvl.elevator.x, lvl.elevator.y - 160, "GOAL ▼", {
         fontFamily: "ui-monospace, monospace",
         fontSize: "18px",
         color: "#ffe066",
