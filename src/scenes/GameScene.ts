@@ -654,10 +654,14 @@ export class GameScene extends Phaser.Scene {
       inWithdrawal // suppress input during withdrawal stumble
     );
 
-    // Counter-boost the player so they move at normal speed in slow-mo
+    // Counter-boost only the player's HORIZONTAL velocity in slow-mo. The
+    // earlier full setVelocity(x/wf, y/wf) version compounded the Y boost
+    // every frame, so jumping mid-slow-mo would rocket the player straight
+    // up. Boosting only X keeps run speed normal under slow-mo while
+    // letting gravity-driven jumps stay physically sane.
     if (this.slowMoActive) {
       const body = this.player.body as Phaser.Physics.Arcade.Body;
-      body.setVelocity(body.velocity.x / worldFactor, body.velocity.y / worldFactor);
+      body.setVelocityX(body.velocity.x / worldFactor);
     }
 
     // Shoot — full-auto weapons fire while held; semi-auto weapons only
