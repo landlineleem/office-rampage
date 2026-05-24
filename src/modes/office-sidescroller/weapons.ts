@@ -269,9 +269,14 @@ export class GuardGun {
     b.rotation = angle;
     const sp = overrideSpeed ?? SideScrollerConfig.guard.bulletSpeed;
     body.setVelocity(Math.cos(angle) * sp, Math.sin(angle) * sp);
+    const dmg = damage ?? SideScrollerConfig.player.guardBulletDamage;
+    // Tint by danger level so the player can tell at a glance which
+    // enemy fired the shot.
+    const trailColor = dmg > 35 ? 0xff2020 : dmg > 22 ? 0xffe066 : 0xff8030;
+    b.setTint(trailColor);
     ensureTrail(this.scene, b, "bullet_trail_guard");
-    showTrail(b, angle, 0xff8030);
-    b.setData("damage", damage ?? SideScrollerConfig.player.guardBulletDamage);
+    showTrail(b, angle, trailColor);
+    b.setData("damage", dmg);
     const life = overrideLifeMs ?? SideScrollerConfig.guard.bulletLifeMs;
     this.scene.time.delayedCall(life, () => {
       if (!b.active) return;
