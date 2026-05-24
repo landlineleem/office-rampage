@@ -321,7 +321,6 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (!pointer.leftButtonDown()) return;
       if (this.cleared || this.player.hp <= 0) return;
-      if (this.player.isSliding) return;
       const w = this.weapons[this.currentWeapon];
       if (w.config.fireMode === "semi") this.tryFireCurrentWeapon(this.time.now);
     });
@@ -753,12 +752,9 @@ export class GameScene extends Phaser.Scene {
 
     // Shoot — full-auto weapons fire while held; semi-auto weapons only
     // fire from the pointerdown event (registered in create()).
+    // You CAN now shoot while sliding — chainable slide-and-shoot.
     const weapon = this.weapons[this.currentWeapon];
-    if (
-      weapon.config.fireMode === "auto" &&
-      pointer.leftButtonDown() &&
-      !this.player.isSliding
-    ) {
+    if (weapon.config.fireMode === "auto" && pointer.leftButtonDown()) {
       this.tryFireCurrentWeapon(time);
     }
 

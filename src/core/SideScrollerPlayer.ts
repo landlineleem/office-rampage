@@ -222,15 +222,12 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
   }
 
   private updateArmAndMuzzle(_time: number, _shooting: boolean): void {
-    // Arm + muzzle overlay disabled. The procedural flat arm clashed with
-    // the 3D AI character and the overlay-on-top approach can't be made
-    // to look right at this art level. Future plan (Path B): generate
-    // character sprites with multiple gun-arm aim angles baked in.
-    // Shoulder world position is still computed below so bullets fire
-    // from the right spot.
+    // Shoulder world position — slightly forward when standing, lower
+    // when sliding (since the player is on their side).
     const shoulderHorizontalOffset = this.facingRight ? 4 : -4;
+    const offsetY = this.isSliding ? -30 : SHOULDER_OFFSET_Y;
     this.shoulderX = this.x + shoulderHorizontalOffset;
-    this.shoulderY = this.y + SHOULDER_OFFSET_Y;
+    this.shoulderY = this.y + offsetY;
     this.arm.setVisible(false);
     this.muzzle.setVisible(false);
   }
