@@ -6,6 +6,7 @@ import { lobbyLevel, type LevelData } from "../modes/office-sidescroller/lobby-l
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
 import { ComboSystem } from "../core/ComboSystem";
 import { HUD } from "../ui/HUD";
+import { sound } from "../core/Sound";
 
 export class GameScene extends Phaser.Scene {
   private player!: SideScrollerPlayer;
@@ -90,8 +91,10 @@ export class GameScene extends Phaser.Scene {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       const e = enemy as SecurityGuard;
       this.pistol.recycle(b);
+      sound.hit();
       if (e.damage()) {
         e.destroy();
+        sound.death();
         this.combo.registerKill(this.time.now);
         this.caffeineMs = Math.min(
           SideScrollerConfig.caffeine.maxMs,
@@ -105,6 +108,7 @@ export class GameScene extends Phaser.Scene {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       this.guardGun.recycle(b);
       if (this.player.takeDamage(this.time.now)) {
+        sound.playerHurt();
         this.combo.break();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
@@ -117,6 +121,7 @@ export class GameScene extends Phaser.Scene {
       if (now - e.lastContact < SideScrollerConfig.guard.contactCooldownMs) return;
       e.lastContact = now;
       if (this.player.takeDamage(now)) {
+        sound.playerHurt();
         this.combo.break();
         if (this.player.hp <= 0) this.onPlayerDeath();
       }
@@ -149,6 +154,7 @@ export class GameScene extends Phaser.Scene {
     // --- Slow-mo on SPACE ---
     const inWithdrawal = time < this.withdrawalUntil;
     const wantSlow = this.keys.SPACE.isDown;
+    const previouslySlow = this.slowMoActive;
     if (wantSlow && this.caffeineMs > 0 && !inWithdrawal) {
       this.slowMoActive = true;
       this.caffeineMs -= delta;
@@ -160,6 +166,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.slowMoActive = false;
     }
+    if (previouslySlow !== this.slowMoActive) sound.setSlowMo(this.slowMoActive);
 
     const worldFactor = this.slowMoActive ? SideScrollerConfig.caffeine.slowFactor : 1;
     this.physics.world.timeScale = 1 / worldFactor; // higher timeScale = slower

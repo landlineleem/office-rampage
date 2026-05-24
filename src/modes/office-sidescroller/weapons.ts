@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SideScrollerConfig } from "./config";
+import { sound } from "../../core/Sound";
 
 export class Pistol {
   scene: Phaser.Scene;
@@ -41,6 +42,7 @@ export class Pistol {
       this.recycle(b);
     });
 
+    sound.gunshot(1.0);
     return true;
   }
 
@@ -80,6 +82,7 @@ export class GuardGun {
       if (!b.active) return;
       this.recycle(b);
     });
+    sound.gunshot(0.7);
   }
 
   recycle(b: Phaser.Physics.Arcade.Sprite): void {

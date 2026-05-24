@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SideScrollerConfig } from "../modes/office-sidescroller/config";
+import { sound } from "./Sound";
 
 export type PlayerKeys = {
   W: Phaser.Input.Keyboard.Key;
@@ -122,6 +123,8 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     return true;
   }
 
+  private wasGrounded = false;
+
   updateInput(
     time: number,
     delta: number,
@@ -132,6 +135,9 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const grounded = this.isGrounded();
     if (grounded) this.lastGroundedAt = time;
+    // Landing sound
+    if (grounded && !this.wasGrounded) sound.land();
+    this.wasGrounded = grounded;
 
     if (this.isSliding && time >= this.slideEndsAt) {
       this.endSlide();
@@ -160,6 +166,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
       if (Phaser.Input.Keyboard.JustDown(keys.W) && canJump) {
         body.setVelocityY(-SideScrollerConfig.player.jumpVelocity);
         this.lastGroundedAt = -Infinity;
+        sound.jump();
       }
 
       // Slide on S. If A or D is also held, the slide goes that direction;
@@ -168,6 +175,12 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
         if (keys.A.isDown) this.facingRight = false;
         else if (keys.D.isDown) this.facingRight = true;
         this.startSlide();
+        sound.slide();
+      }
+
+      // Footsteps while walking on ground
+      if (grounded && Math.abs(body.velocity.x) > 30 && !this.isSliding) {
+        sound.footstep();
       }
     }
 

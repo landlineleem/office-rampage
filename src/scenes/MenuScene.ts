@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { sound } from "../core/Sound";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -76,7 +77,14 @@ export class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
-    this.input.once("pointerdown", () => this.scene.start("Game"));
-    this.input.keyboard?.once("keydown-SPACE", () => this.scene.start("Game"));
+    const beginGame = (): void => {
+      // AudioContext requires a user gesture before audio can play.
+      sound.init();
+      sound.resume();
+      sound.uiClick();
+      this.scene.start("Game");
+    };
+    this.input.once("pointerdown", beginGame);
+    this.input.keyboard?.once("keydown-SPACE", beginGame);
   }
 }
