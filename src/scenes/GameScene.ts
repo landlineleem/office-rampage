@@ -62,6 +62,9 @@ export class GameScene extends Phaser.Scene {
     this.slowMoActive = false;
     this.withdrawalUntil = 0;
     this.cleared = false;
+    // Reset any global state that survives between scene restarts
+    sound.setSlowMo(false);
+    this.physics.world.timeScale = 1;
 
     this.physics.world.setBounds(0, 0, lvl.width, lvl.height);
     this.cameras.main.setBounds(0, 0, lvl.width, lvl.height);
@@ -211,6 +214,9 @@ export class GameScene extends Phaser.Scene {
 
     this.keys = this.input.keyboard!.addKeys("W,A,S,D,SPACE") as PlayerKeys;
     this.input.mouse?.disableContextMenu();
+
+    // Floor intro banner
+    this.hud.showBanner(`FLOOR ${this.levelIndex + 1} · ${this.level.name.toUpperCase()}`, 1600);
   }
 
   override update(time: number, delta: number): void {
@@ -287,6 +293,15 @@ export class GameScene extends Phaser.Scene {
         this.particles.muzzleFlash(mx, my, this.player.aimAngle);
         this.particles.smokePuff(mx, my, 1);
       }
+    }
+
+    // Slide dust trail behind sliding player
+    if (this.player.isSliding && time % 80 < 16) {
+      this.particles.slideDust(
+        this.player.x,
+        this.player.y - 4,
+        this.player.facingRight ? 1 : -1
+      );
     }
 
     // Enemy AI
