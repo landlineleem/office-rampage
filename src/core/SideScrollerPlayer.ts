@@ -96,7 +96,7 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     const src = this.texture.source[0];
     const aspect = src.width / src.height;
     const displayH = category === "stand" ? STAND_H : SLIDE_H;
-    const displayW = displayH * aspect;
+    const displayW = displayH * aspect; // preserve source aspect ratio
     this.setDisplaySize(displayW, displayH);
 
     const sx = displayW / src.width;

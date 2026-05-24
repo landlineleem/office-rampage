@@ -217,10 +217,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.currentPoseKey === key) return;
     this.currentPoseKey = key;
     this.setTexture(key);
-    const dispW = BASE_STAND_W * this.config.scale;
-    const dispH = BASE_STAND_H * this.config.scale;
-    this.setDisplaySize(dispW, dispH);
     const src = this.texture.source[0];
+    // Preserve source aspect ratio — AI sprites have a specific shape
+    // (377x661 ≈ 0.57); forcing them to BASE_STAND_W x BASE_STAND_H
+    // squashed them horizontally.
+    const dispH = BASE_STAND_H * this.config.scale;
+    const dispW = dispH * (src.width / src.height);
+    this.setDisplaySize(dispW, dispH);
     const sx = dispW / src.width;
     const sy = dispH / src.height;
     const bodyW = BASE_BODY_W * this.config.scale;
