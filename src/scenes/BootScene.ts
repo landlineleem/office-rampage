@@ -65,7 +65,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("guard_arm", 26, 8, (g) => this.drawGuardArm(g));
 
     // Projectiles
-    this.makeTexture("staple", 12, 6, (g) => this.drawStaple(g));
+    this.makeTexture("staple", 16, 10, (g) => this.drawStaple(g));
     this.makeTexture("guard_bullet", 8, 4, (g) => this.drawGuardBullet(g));
 
     // Muzzle flash sprite (one-shot bright burst at the barrel)
@@ -119,6 +119,7 @@ export class BootScene extends Phaser.Scene {
     this.makeTexture("hanging_light", 160, 24, (g) => this.drawHangingLight(g));
     this.makeTexture("water_cooler_2", 60, 130, (g) => this.drawWaterCooler(g));
     this.makeTexture("server_rack", 84, 200, (g) => this.drawServerRack(g));
+    this.makeTexture("office_door", 60, 140, (g) => this.drawOfficeDoor(g));
 
     this.scene.start("Menu");
   }
@@ -390,12 +391,28 @@ export class BootScene extends Phaser.Scene {
 
   // ---------- Projectiles ----------
   private drawStaple(g: Phaser.GameObjects.Graphics): void {
-    g.fillStyle(0xd0d0d0, 1);
-    g.fillRect(10, 0, 2, 6);
-    g.fillRect(0, 0, 12, 2);
-    g.fillRect(0, 4, 12, 2);
-    g.lineStyle(1, 0x6b6b6b, 1);
-    g.strokeRect(10, 0, 2, 6);
+    // 16 x 10 — actual staple shape. Bullets travel +x, so the bend is
+    // on the LEFT (the bullet's tail) and the two prongs lead RIGHT
+    // toward whatever they're about to hit.
+    // Spine / bend (back of staple)
+    g.fillStyle(0xd6d6dc, 1);
+    g.fillRect(0, 0, 4, 10);
+    // Top prong
+    g.fillRect(4, 0, 11, 2);
+    // Bottom prong
+    g.fillRect(4, 8, 11, 2);
+    // Sharper tips
+    g.fillRect(14, 0, 2, 3);
+    g.fillRect(14, 7, 2, 3);
+    // Top highlight (catches light)
+    g.fillStyle(0xf2f2f6, 1);
+    g.fillRect(0, 0, 16, 1);
+    g.fillRect(0, 0, 1, 10);
+    // Bottom shadow
+    g.fillStyle(0x9a9aa0, 1);
+    g.fillRect(0, 9, 16, 1);
+    g.fillRect(3, 8, 13, 1);
+    g.fillRect(3, 1, 13, 1);
   }
 
   private drawGuardBullet(g: Phaser.GameObjects.Graphics): void {
@@ -1061,6 +1078,43 @@ export class BootScene extends Phaser.Scene {
     // Drip tray
     g.fillStyle(0x1f232c, 1);
     g.fillRect(W / 2 - 12, 96, 24, 6);
+  }
+
+  private drawOfficeDoor(g: Phaser.GameObjects.Graphics): void {
+    // 60 x 140 — closed office door, brown wood with frosted glass panel
+    // in the top third and a brass doorknob on the right.
+    const W = 60, H = 140;
+    // Frame
+    g.fillStyle(0x2a1d10, 1);
+    g.fillRect(0, 0, W, H);
+    // Door body
+    g.fillStyle(0x7a4a22, 1);
+    g.fillRect(3, 3, W - 6, H - 3);
+    // Wood grain stripes
+    g.fillStyle(0x5c3a18, 1);
+    for (let y = 8; y < H - 4; y += 16) g.fillRect(6, y, W - 12, 1);
+    // Frosted glass top panel
+    g.fillStyle(0xc8d6dc, 1);
+    g.fillRect(8, 12, W - 16, 40);
+    g.fillStyle(0xa8b6bc, 0.6);
+    g.fillRect(8, 12, W - 16, 4);
+    g.fillStyle(0xe4ecef, 0.4);
+    g.fillRect(10, 16, W - 20, 30);
+    // Glass panel frame
+    g.lineStyle(2, 0x4a2d10, 1);
+    g.strokeRect(8, 12, W - 16, 40);
+    // Lower panel divider
+    g.fillStyle(0x4a2d10, 1);
+    g.fillRect(8, 80, W - 16, 2);
+    // Doorknob
+    g.fillStyle(0xc59842, 1);
+    g.fillCircle(W - 12, 100, 4);
+    g.fillStyle(0xe8b33a, 1);
+    g.fillCircle(W - 13, 99, 1.5);
+    // Hinge marks
+    g.fillStyle(0x1a1006, 1);
+    g.fillCircle(5, 20, 2);
+    g.fillCircle(5, 120, 2);
   }
 
   private drawServerRack(g: Phaser.GameObjects.Graphics): void {

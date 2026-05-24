@@ -12,6 +12,13 @@ export type LowObstacle = {
 
 export type EnemySpawn = { type: "guard"; x: number };
 
+// A wall door that opens and spits out a guard when the player crosses
+// `triggerX`. One-shot.
+export type DoorSpawner = {
+  x: number;
+  triggerX: number;
+};
+
 export type LevelTheme = "lobby" | "cubicles";
 
 export type LevelData = {
@@ -25,11 +32,10 @@ export type LevelData = {
   elevator: { x: number; y: number };
   // p.y = TOP (walkable surface) of the platform, p.y + p.height = bottom.
   platforms: Platform[];
-  // o.y = TOP of the obstacle, o.y + o.height = bottom. Bottom must sit
-  // between standing-player body top (~395) and slide-body top (~485) so
-  // standing collides and sliding passes under.
+  // o.y = TOP of the obstacle, o.y + o.height = bottom.
   lowObstacles: LowObstacle[];
   enemies: EnemySpawn[];
+  doorSpawners: DoorSpawner[];
 };
 
 export const lobbyLevel: LevelData = {
@@ -42,24 +48,23 @@ export const lobbyLevel: LevelData = {
   exteriorEndX: 900,
   elevator: { x: 3420, y: 540 },
   platforms: [
-    // Reception desk — vault-able (96 tall, jump max ~136)
     { x: 1500, y: 444, width: 200, height: 96 },
-    // File cabinet — just-barely vault-able (108 tall)
     { x: 2200, y: 432, width: 76, height: 108 },
   ],
   lowObstacles: [
-    // Hazard barrier hanging at waist height — slide under.
-    {
-      x: 2750,
-      y: 414,
-      width: 160,
-      height: 66,
-      textureKey: "low_obstacle",
-    },
+    { x: 2750, y: 414, width: 160, height: 66, textureKey: "low_obstacle" },
   ],
+  // Guards visible at the start
   enemies: [
     { type: "guard", x: 1180 },
     { type: "guard", x: 1900 },
     { type: "guard", x: 3100 },
+  ],
+  // Doors that open as the player advances. Each spawns one guard.
+  doorSpawners: [
+    { x: 1300, triggerX: 1100 },
+    { x: 2000, triggerX: 1750 },
+    { x: 2600, triggerX: 2400 },
+    { x: 3250, triggerX: 3050 },
   ],
 };

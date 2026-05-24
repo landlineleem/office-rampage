@@ -38,6 +38,13 @@ export const cubiclesLevel: LevelData = {
     { type: "guard", x: 2900 },
     { type: "guard", x: 3550 },
   ],
+  doorSpawners: [
+    { x: 1000, triggerX: 800 },
+    { x: 1900, triggerX: 1700 },
+    { x: 2700, triggerX: 2500 },
+    { x: 3200, triggerX: 3000 },
+    { x: 3700, triggerX: 3450 },
+  ],
 };
 
 export const LEVELS: LevelData[] = [];

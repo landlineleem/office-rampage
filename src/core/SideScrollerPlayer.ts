@@ -113,10 +113,10 @@ export class SideScrollerPlayer extends Phaser.Physics.Arcade.Sprite {
     return body.blocked.down || body.touching.down;
   }
 
-  takeDamage(now: number): boolean {
+  takeDamage(now: number, amount = 1): boolean {
     if (now < this.invulnUntil) return false;
     this.invulnUntil = now + SideScrollerConfig.player.invulnMs;
-    this.hp -= 1;
+    this.hp = Math.max(0, this.hp - amount);
     this.scene.cameras.main.shake(150, 0.012);
     this.setTint(0xff5252);
     this.scene.time.delayedCall(120, () => this.clearTint());

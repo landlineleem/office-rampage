@@ -6,8 +6,11 @@ export const SideScrollerConfig = {
     slideMs: 460,
     slideVelocity: 540,
     coyoteMs: 100,
-    invulnMs: 800,
-    maxHP: 3,
+    invulnMs: 450, // briefer i-frames since each hit is smaller now
+    maxHP: 100,
+    // Damage values for the various ways the player can take a hit
+    guardBulletDamage: 18,
+    guardContactDamage: 15,
     bodyWidth: 18,
     bodyHeight: 44,
     slideBodyHeight: 22,

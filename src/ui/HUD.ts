@@ -5,8 +5,11 @@ const FONT = "ui-monospace, monospace";
 
 export class HUD {
   private scene: Phaser.Scene;
-  private hpIcons: Phaser.GameObjects.Text[] = [];
-  private hpBg: Phaser.GameObjects.Rectangle;
+  private hpLabel: Phaser.GameObjects.Text;
+  private hpBarBg: Phaser.GameObjects.Rectangle;
+  private hpBar: Phaser.GameObjects.Rectangle;
+  private hpBarPulse: Phaser.GameObjects.Rectangle;
+  private hpValueText: Phaser.GameObjects.Text;
   private caffeineLabel: Phaser.GameObjects.Text;
   private caffeineBarBg: Phaser.GameObjects.Rectangle;
   private caffeineBar: Phaser.GameObjects.Rectangle;
@@ -36,23 +39,44 @@ export class HUD {
       .setScrollFactor(0)
       .setDepth(z - 1);
 
-    this.hpBg = scene.add
-      .rectangle(16, 14, 248, 30, 0x1a1d24, 0.6)
+    this.hpLabel = scene.add
+      .text(16, 12, "HP", {
+        fontFamily: FONT,
+        fontSize: "10px",
+        color: "#aaa",
+        letterSpacing: 2,
+      })
+      .setScrollFactor(0)
+      .setDepth(z + 1);
+
+    this.hpBarBg = scene.add
+      .rectangle(16, 28, 248, 18, 0x000000, 0.7)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(z);
 
-    for (let i = 0; i < max; i++) {
-      const icon = scene.add
-        .text(28 + i * 36, 12, "♥", {
-          fontFamily: FONT,
-          fontSize: "28px",
-          color: "#ff5252",
-        })
-        .setScrollFactor(0)
-        .setDepth(z + 1);
-      this.hpIcons.push(icon);
-    }
+    this.hpBar = scene.add
+      .rectangle(18, 30, 244, 14, 0x6abd5a)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(z + 1);
+
+    // Pulsing overlay used when HP is low
+    this.hpBarPulse = scene.add
+      .rectangle(18, 30, 244, 14, 0xff8080, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(z + 2);
+
+    this.hpValueText = scene.add
+      .text(260, 28, `${max}`, {
+        fontFamily: FONT,
+        fontSize: "14px",
+        color: "#ffffff",
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(z + 2);
 
     this.caffeineLabel = scene.add
       .text(16, 52, "CAFFEINE", {
@@ -162,30 +186,42 @@ export class HUD {
     score: number,
     inWithdrawal: boolean
   ): void {
-    // HP — hearts flash red + shake on damage
+    // HP bar — width = hp%, color from green → yellow → red, pulse low
+    const max = SideScrollerConfig.player.maxHP;
+    const pct = Phaser.Math.Clamp(hp / max, 0, 1);
+    this.hpBar.width = 244 * pct;
+    this.hpBarPulse.width = 244 * pct;
+    // Color tier
+    let color = 0x6abd5a; // green
+    if (pct <= 0.25) color = 0xc73a3a;
+    else if (pct <= 0.55) color = 0xe8b33a;
+    this.hpBar.fillColor = color;
+    this.hpValueText.setText(`${hp}/${max}`);
+
+    // Damage feedback: punch the bar + label when HP drops
     if (hp < this.prevHp) {
-      for (const icon of this.hpIcons) {
-        this.scene.tweens.add({
-          targets: icon,
-          x: icon.x + 4,
-          yoyo: true,
-          repeat: 3,
-          duration: 30,
-        });
-      }
+      this.scene.tweens.add({
+        targets: [this.hpBar, this.hpBarBg, this.hpValueText, this.hpLabel],
+        x: "+=4",
+        yoyo: true,
+        repeat: 2,
+        duration: 30,
+      });
     }
     this.prevHp = hp;
-    for (let i = 0; i < this.hpIcons.length; i++) {
-      const alive = i < hp;
-      this.hpIcons[i].setText(alive ? "♥" : "♡");
-      this.hpIcons[i].setColor(alive ? "#ff5252" : "#5a3030");
-      this.hpIcons[i].setAlpha(alive ? 1 : 0.45);
+
+    // Low-HP danger pulse
+    if (pct <= 0.3 && pct > 0) {
+      const pulse = 0.4 + Math.sin(this.scene.time.now * 0.012) * 0.4;
+      this.hpBarPulse.fillAlpha = Math.max(0, pulse);
+    } else {
+      this.hpBarPulse.fillAlpha = 0;
     }
 
     // Caffeine bar — width pct, color shifts on withdrawal
-    const pct = Phaser.Math.Clamp(caffeineMs / SideScrollerConfig.caffeine.maxMs, 0, 1);
-    this.caffeineBar.width = 244 * pct;
-    this.caffeinePulse.width = 244 * pct;
+    const caffPct = Phaser.Math.Clamp(caffeineMs / SideScrollerConfig.caffeine.maxMs, 0, 1);
+    this.caffeineBar.width = 244 * caffPct;
+    this.caffeinePulse.width = 244 * caffPct;
     if (inWithdrawal) {
       this.caffeineBar.fillColor = 0x5a3030;
       this.caffeineLabel.setColor("#aa4444");
@@ -194,10 +230,10 @@ export class HUD {
       const lowColor = 0xc73a3a;
       const midColor = 0xc78c3a;
       const hiColor = 0xe8b33a;
-      let color = lowColor;
-      if (pct > 0.7) color = hiColor;
-      else if (pct > 0.3) color = midColor;
-      this.caffeineBar.fillColor = color;
+      let caffColor = lowColor;
+      if (caffPct > 0.7) caffColor = hiColor;
+      else if (caffPct > 0.3) caffColor = midColor;
+      this.caffeineBar.fillColor = caffColor;
       this.caffeineLabel.setColor("#aaa");
     }
 
@@ -295,8 +331,11 @@ export class HUD {
     [
       this.leftPanel,
       this.rightPanel,
-      this.hpBg,
-      ...this.hpIcons,
+      this.hpLabel,
+      this.hpBarBg,
+      this.hpBar,
+      this.hpBarPulse,
+      this.hpValueText,
       this.caffeineLabel,
       this.caffeineBarBg,
       this.caffeineBar,

@@ -4,9 +4,12 @@ import { sound } from "../../core/Sound";
 
 // ---------- Weapon definitions ----------
 
+export type FireMode = "semi" | "auto";
+
 export interface WeaponConfig {
   name: string;
   shortName: string;
+  fireMode: FireMode;
   fireRateMs: number;
   bulletSpeed: number;
   bulletLifeMs: number;
@@ -19,10 +22,11 @@ export interface WeaponConfig {
 export const SINGLE_STAPLER: WeaponConfig = {
   name: "STAPLER",
   shortName: "STAPLER",
-  fireRateMs: SideScrollerConfig.pistol.fireRateMs,
-  bulletSpeed: SideScrollerConfig.pistol.bulletSpeed,
-  bulletLifeMs: SideScrollerConfig.pistol.bulletLifeMs,
-  spawnOffset: SideScrollerConfig.pistol.spawnOffset,
+  fireMode: "semi",
+  fireRateMs: 140, // min spacing between trigger pulls
+  bulletSpeed: 1000,
+  bulletLifeMs: 1100,
+  spawnOffset: 26,
   spread: 0,
   shotStrength: 1.0,
   bulletTextureKey: "staple",
@@ -31,11 +35,12 @@ export const SINGLE_STAPLER: WeaponConfig = {
 export const AUTO_STAPLER: WeaponConfig = {
   name: "AUTO STAPLER",
   shortName: "AUTO",
-  fireRateMs: 75,
-  bulletSpeed: 1050,
+  fireMode: "auto",
+  fireRateMs: 70,
+  bulletSpeed: 1100,
   bulletLifeMs: 850,
   spawnOffset: 26,
-  spread: 0.07, // slight inaccuracy
+  spread: 0.08, // slight inaccuracy
   shotStrength: 0.7,
   bulletTextureKey: "staple",
 };
@@ -142,7 +147,7 @@ export class PlayerWeapon {
     const body = b.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.reset(sx, sy);
-    body.setSize(8, 4).setOffset(2, 1);
+    body.setSize(10, 6).setOffset(3, 2);
     b.rotation = angle;
 
     const sp = this.config.bulletSpeed;
@@ -172,9 +177,6 @@ export class PlayerWeapon {
     updateBulletTrails(this.bullets, 0xffe066);
   }
 }
-
-// Backwards-compatible alias so other files keep working
-export const Pistol = PlayerWeapon;
 
 // ---------- Guard weapon (unchanged) ----------
 

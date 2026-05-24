@@ -34,6 +34,12 @@ export class GameScene extends Phaser.Scene {
   private fx!: HitFx;
   private corpses!: Phaser.Physics.Arcade.Group;
   private pickups!: Phaser.Physics.Arcade.Group;
+  private doorSpawners: Array<{
+    x: number;
+    triggerX: number;
+    sprite: Phaser.GameObjects.Image;
+    triggered: boolean;
+  }> = [];
   private vignette!: Phaser.GameObjects.Image;
   private slowMoTint!: Phaser.GameObjects.Rectangle;
   private crosshair!: Phaser.GameObjects.Image;
@@ -122,6 +128,21 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Door spawners — render closed doors at each position
+    this.doorSpawners = [];
+    for (const spawner of lvl.doorSpawners) {
+      const doorSprite = this.add
+        .image(spawner.x, lvl.groundY, "office_door")
+        .setOrigin(0.5, 1)
+        .setDepth(4); // behind player but in front of wall
+      this.doorSpawners.push({
+        x: spawner.x,
+        triggerX: spawner.triggerX,
+        sprite: doorSprite,
+        triggered: false,
+      });
+    }
+
     // --- Colliders ---
     this.physics.add.collider(this.player, this.platforms);
     this.physics.add.collider(this.guards, this.platforms);
@@ -153,13 +174,13 @@ export class GameScene extends Phaser.Scene {
       this.onPickup(p);
     });
 
-    // Guard bullets → player
+    // Guard bullets → player (scaled bullet damage)
     this.physics.add.overlap(this.player, this.guardGun.bullets, (_pl, bullet) => {
       const b = bullet as Phaser.Physics.Arcade.Sprite;
       const hx = b.x;
       const hy = b.y;
       this.guardGun.recycle(b);
-      if (this.player.takeDamage(this.time.now)) {
+      if (this.player.takeDamage(this.time.now, SideScrollerConfig.player.guardBulletDamage)) {
         sound.playerHurt();
         this.particles.playerHit(hx, hy);
         this.fx.playerHurt();
@@ -168,13 +189,13 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Enemy contact damage
+    // Enemy contact damage (scaled contact damage)
     this.physics.add.overlap(this.player, this.guards, (_pl, enemy) => {
       const e = enemy as SecurityGuard;
       const now = this.time.now;
       if (now - e.lastContact < SideScrollerConfig.guard.contactCooldownMs) return;
       e.lastContact = now;
-      if (this.player.takeDamage(now)) {
+      if (this.player.takeDamage(now, SideScrollerConfig.player.guardContactDamage)) {
         sound.playerHurt();
         this.fx.playerHurt();
         this.combo.break();
@@ -223,8 +244,35 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-ONE", () => this.selectWeapon(0));
     this.input.keyboard?.on("keydown-TWO", () => this.selectWeapon(1));
 
+    // Semi-auto trigger fires once per click (pointerdown). Full-auto
+    // is handled by the held-button check in update().
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.leftButtonDown()) return;
+      if (this.cleared || this.player.hp <= 0) return;
+      if (this.player.isSliding) return;
+      const w = this.weapons[this.currentWeapon];
+      if (w.config.fireMode === "semi") this.tryFireCurrentWeapon(this.time.now);
+    });
+
     // Floor intro banner
     this.hud.showBanner(`FLOOR ${this.levelIndex + 1} · ${this.level.name.toUpperCase()}`, 1600);
+  }
+
+  private tryFireCurrentWeapon(time: number): void {
+    const weapon = this.weapons[this.currentWeapon];
+    const fired = weapon.tryFire(
+      time,
+      this.player.shoulderX,
+      this.player.shoulderY,
+      this.player.aimAngle
+    );
+    if (!fired) return;
+    this.player.flashMuzzle(time);
+    const off = weapon.config.spawnOffset;
+    const mx = this.player.shoulderX + Math.cos(this.player.aimAngle) * off;
+    const my = this.player.shoulderY + Math.sin(this.player.aimAngle) * off;
+    this.particles.muzzleFlash(mx, my, this.player.aimAngle);
+    this.particles.smokePuff(mx, my, 1);
   }
 
   private registerWeaponColliders(weapon: PlayerWeapon): void {
@@ -268,13 +316,46 @@ export class GameScene extends Phaser.Scene {
 
   private maybeDropAutoStaplerPickup(x: number, y: number): void {
     // Only on Floor 1, only if the player doesn't already have it,
-    // only when this kill emptied the guard roster.
+    // only when this kill emptied the guard roster AND every door
+    // spawner has already done its thing (so we don't drop the
+    // pickup before the level is actually clearable).
     if (this.levelIndex !== 0) return;
     if (this.hasAutoStapler) return;
     if (this.guards.countActive(true) > 0) return;
+    const allDoorsSpent = this.doorSpawners.every((ds) => ds.triggered);
+    if (!allDoorsSpent) return;
     const pickup = new WeaponPickup(this, x, y - 60, "auto_stapler");
     this.pickups.add(pickup);
     this.hud.showBanner("WEAPON DROPPED", 1500);
+  }
+
+  private triggerDoorSpawn(ds: {
+    x: number;
+    sprite: Phaser.GameObjects.Image;
+    triggered: boolean;
+  }): void {
+    const groundY = this.level.groundY;
+    // Open the door (slide aside + fade)
+    this.tweens.add({
+      targets: ds.sprite,
+      scaleX: 0,
+      x: ds.x + 30,
+      duration: 350,
+      ease: "Cubic.easeOut",
+      onComplete: () => ds.sprite.setVisible(false),
+    });
+    sound.elevatorDing();
+    // Spawn a guard inside the doorway then have them "step out"
+    const guard = new SecurityGuard(this, ds.x, groundY - 4, this.guardGun);
+    guard.setAlpha(0);
+    this.guards.add(guard);
+    this.tweens.add({
+      targets: guard,
+      alpha: 1,
+      duration: 250,
+    });
+    // Small puff of dust at the door
+    this.particles.smokePuff(ds.x, groundY - 30, 2);
   }
 
   private onPickup(p: WeaponPickup): void {
@@ -358,23 +439,15 @@ export class GameScene extends Phaser.Scene {
       body.setVelocity(body.velocity.x / worldFactor, body.velocity.y / worldFactor);
     }
 
-    // Shoot (hold-to-fire) — uses the currently selected weapon
-    if (pointer.leftButtonDown() && !this.player.isSliding) {
-      const weapon = this.weapons[this.currentWeapon];
-      const fired = weapon.tryFire(
-        time,
-        this.player.shoulderX,
-        this.player.shoulderY,
-        this.player.aimAngle
-      );
-      if (fired) {
-        this.player.flashMuzzle(time);
-        const off = weapon.config.spawnOffset;
-        const mx = this.player.shoulderX + Math.cos(this.player.aimAngle) * off;
-        const my = this.player.shoulderY + Math.sin(this.player.aimAngle) * off;
-        this.particles.muzzleFlash(mx, my, this.player.aimAngle);
-        this.particles.smokePuff(mx, my, 1);
-      }
+    // Shoot — full-auto weapons fire while held; semi-auto weapons only
+    // fire from the pointerdown event (registered in create()).
+    const weapon = this.weapons[this.currentWeapon];
+    if (
+      weapon.config.fireMode === "auto" &&
+      pointer.leftButtonDown() &&
+      !this.player.isSliding
+    ) {
+      this.tryFireCurrentWeapon(time);
     }
 
     // Slide dust trail behind sliding player
@@ -384,6 +457,14 @@ export class GameScene extends Phaser.Scene {
         this.player.y - 4,
         this.player.facingRight ? 1 : -1
       );
+    }
+
+    // Door spawners — trigger when player crosses their x threshold
+    for (const ds of this.doorSpawners) {
+      if (!ds.triggered && this.player.x >= ds.triggerX) {
+        ds.triggered = true;
+        this.triggerDoorSpawn(ds);
+      }
     }
 
     // Enemy AI
