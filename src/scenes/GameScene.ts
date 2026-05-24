@@ -706,6 +706,14 @@ export class GameScene extends Phaser.Scene {
     );
     // Boss HP bar — show/update if a boss is alive
     this.updateBossUi();
+
+    // Camera lookahead — subtle shift toward the aim cursor so you can
+    // see more of the world in the direction you're aiming. Smoothed.
+    const aimDx = pointer.worldX - this.player.x;
+    const targetLookahead = Phaser.Math.Clamp(aimDx * 0.18, -180, 180);
+    const cam = this.cameras.main;
+    const current = cam.followOffset.x;
+    cam.followOffset.x = current + (-150 + targetLookahead - current) * 0.06;
   }
 
   private updateBossUi(): void {
